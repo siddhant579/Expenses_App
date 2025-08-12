@@ -14,7 +14,7 @@ const TransactionsPage = () => {
 
   // Fetch from backend
   useEffect(() => {
-    fetch("http://localhost:5000/api/expenses")
+    fetch("https://sanghamitra-expenses-app-2025.vercel.app")
       .then((res) => res.json())
       .then((data) => setExpenses(data))
       .catch((err) => console.error("Error fetching expenses:", err));
