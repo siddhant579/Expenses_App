@@ -9,7 +9,11 @@ const expensesRoutes = require("./routes/expenseRoutes");
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "https://sanghamitra-expenses-frontend.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"], // optional: allowed methods
+  credentials: true // optional: if you need cookies/auth headers
+}));
 app.use(express.json());
 
 // Routes
