@@ -90,7 +90,7 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
 
       // Send to backend
       try {
-        const res = await fetch("https://expenses-app-server-one.vercel.app/", {
+        const res = await fetch("https://expenses-app-server-one.vercel.app/api/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(expenseData)
