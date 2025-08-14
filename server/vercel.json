@@ -11,5 +11,8 @@
       "src": "/api/(.*)",
       "dest": "server.js"
     }
-  ]
+  ],
+  "env": {
+    "MONGO_URI": "mongodb+srv://siddhantshende96:Siddhant188@cluster0.8nplega.mongodb.net/expense_app"
+  }
 }
