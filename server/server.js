@@ -12,13 +12,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use("/api", expensesRoutes);
-
 // Test route to check server connection
 app.get("/", (req, res) => {
   res.json({ message: "✅ Server is running fine!" });
 });
+
+// Routes
+app.use("/api", expensesRoutes);
+
 
 // DB connection
 mongoose
