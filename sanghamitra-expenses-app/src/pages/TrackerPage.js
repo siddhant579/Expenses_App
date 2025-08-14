@@ -96,7 +96,7 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
           body: JSON.stringify(expenseData)
         });
         if (!res.ok) throw new Error("Failed to save expense");
-      } catch (err) {
+      } catch (error) {
         console.error(error);
         alert("Error saving expense to server");
       }
