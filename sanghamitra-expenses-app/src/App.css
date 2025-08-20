@@ -1,91 +1,150 @@
+/* Import Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Raleway:wght@400;600&family=Quicksand:wght@500&display=swap');
+/* Global */
 body {
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #f5f7fa;
+  font-family: 'Poppins', 'Raleway', 'Quicksand', sans-serif;
+  background-color: #f9fafc;
   color: #333;
+  line-height: 1.6;
 }
-
+/* Container */
 .container {
-  max-width: 900px;
-  margin: 0 auto;
+  max-width: 950px;
+  margin: 2rem auto;
   padding: 2rem;
   background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  font-family: 'Raleway', sans-serif;
 }
-
+/* Navbar */
 nav {
-  background-color: #1e3a8a;
-  padding: 1rem;
-  border-radius: 8px;
+  background: linear-gradient(90deg, #a7c5eb, #cddafd);
+  padding: 0.8rem;
+  border-radius: 14px;
   text-align: center;
+  margin-bottom: 2rem;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  font-family: 'Poppins', sans-serif;
 }
-
 nav a {
-  color: #fff;
+  color: #333;
   text-decoration: none;
-  margin: 0 0.5rem;
-  font-weight: bold;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  transition: background-color 0.3s ease, transform 0.2s ease, color 0.3s ease;
-  display: inline-block;
+  margin: 0 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 1.2rem;
+  border-radius: 10px;
+  transition: background 0.3s ease, transform 0.2s ease, color 0.2s ease;
+  font-family: 'Quicksand', sans-serif;
 }
-
 nav a:hover {
-  background-color: #24af6f;
+  background-color: #ffe0ac;
   transform: scale(1.05);
+  color: #111;
 }
-
 nav a.active {
-  background-color:#24af6f;
+  background-color: #b8f2e6;
+  color: #111;
 }
-
+/* Headings */
 h1, h2, h3 {
-  color: #1e3a8a;
+  color: #2d2f7f;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+  font-family: 'Poppins', sans-serif;
 }
-
+/* Title */
+.main-title {
+  text-align: center;
+  font-size: 2.3rem;
+  font-weight: 700;
+  margin-bottom: 1.8rem;
+  color: #2d2f7f; /* Deep pastel navy */
+  letter-spacing: 1.5px;
+  font-family: 'Quicksand', sans-serif;
+}
+/* Form */
 .form {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: 15px;
+  background: #fdfdff;
+  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.05),
+              inset -2px -2px 6px rgba(255,255,255,0.7);
+  font-family: 'Raleway', sans-serif;
 }
-
 .form input, .form select {
-  padding: 0.5rem;
+  padding: 0.7rem;
   font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
   flex: 1 1 200px;
+  transition: 0.2s;
+  background-color: #fafafa;
+  font-family: 'Quicksand', sans-serif;
 }
-
+.form input:focus, .form select:focus {
+  border-color: #a7c5eb;
+  box-shadow: 0 0 8px rgba(167,197,235,0.6);
+  outline: none;
+}
+/* Buttons */
 button {
-  background-color: #2563eb;
-  color: white;
-  padding: 0.6rem 1rem;
+  background: #cddafd;
+  color: #222;
+  padding: 0.7rem 1.4rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
-
 button:hover {
-  background-color: #1e40af;
+  background: #a7c5eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
-
+/* Balance Card */
+.balance-card {
+  background: linear-gradient(135deg, #b8f2e6, #fdfdff);
+  color: #222;
+  padding: 1rem 2rem;
+  border-radius: 15px;
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 1.5rem 0;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+  font-family: 'Quicksand', sans-serif;
+}
+/* Table */
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  font-family: 'Raleway', sans-serif;
 }
-
 table th, table td {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
+  padding: 0.9rem;
+  border: 1px solid #f0f0f0;
   text-align: left;
 }
-
 table th {
-  background-color: #f1f5f9;
+  background-color: #f0f4ff;
+  font-weight: 600;
+}
+table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+table tr:hover {
+  background-color: #e8f0fe;
 }
