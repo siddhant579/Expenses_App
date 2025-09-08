@@ -1,26 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
-const TransactionsPage = () => {
-  const [expenses, setExpenses] = useState([]);
+const TransactionsPage = ({ expenses }) => {
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
 
   const monthsList = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December",
   ];
 
-  const yearOptions = ["2020", "2021", "2022", "2023", "2024", "2025"];
+  const yearOptions = ["2020","2021","2022","2023","2024","2025"];
 
-  // Fetch from backend
-  useEffect(() => {
-    fetch("https://expenses-app-server-one.vercel.app/api/")
-      .then((res) => res.json())
-      .then((data) => setExpenses(data))
-      .catch((err) => console.error("Error fetching expenses:", err));
-  }, []);
-
-  // Filter expenses
+  // ✅ Filter expenses (using props, no fetching here)
   const filtered = expenses.filter((e) => {
     const expenseDate = new Date(e.date);
     const monthMatch =
@@ -116,9 +107,7 @@ const TransactionsPage = () => {
           <tbody>
             {filtered.map((e, i) => (
               <tr key={i}>
-                <td style={tdStyle}>
-                  {new Date(e.date).toLocaleDateString()}
-                </td>
+                <td style={tdStyle}>{new Date(e.date).toLocaleDateString()}</td>
                 <td style={tdStyle}>{e.category}</td>
                 <td style={tdStyle}>{e.type}</td>
                 <td style={tdStyle}>₹{e.amount}</td>
