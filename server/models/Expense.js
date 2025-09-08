@@ -1,21 +1,15 @@
-// models/Expense.js
 const mongoose = require("mongoose");
 
 const expenseSchema = new mongoose.Schema(
   {
+    mainCategory: {
+      type: String,
+      required: true,
+      enum: ["Hyderabad", "Wardha", "Engineering"],
+    },
     category: {
       type: String,
       required: true,
-      enum: [
-        "Grocery",
-        "Household Work",
-        "Computer Repair",
-        "D-Mart",
-        "Utilities",
-        "Others",
-        "Direct Payment",
-        "UPI Payment",
-      ],
     },
     type: {
       type: String,
