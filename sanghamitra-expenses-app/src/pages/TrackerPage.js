@@ -1,25 +1,49 @@
 import React, { useState } from "react";
-
 const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance }) => {
   const [initial, setInitial] = useState("");
   const [expenseForms, setExpenseForms] = useState([
-    { category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }
+    { mainCategory: "", category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }
   ]);
   const [editIndex, setEditIndex] = useState(null);
 
-  const categories = [
-    "Grocery",
-    "Household Work",
-    "Computer Repair",
-    "D-Mart",
-    "Utilities",
-    "Others",
-    "Direct Payment",
-    "UPI Payment"
-  ];
-  const creditCategories = ["Direct Payment", "UPI Payment"];
+  // 🔹 Main + Sub Category structure
+  const categoryGroups = {
+    Hyderabad: [
+      "Grocery",
+      "Household Work",
+      "Computer Repair",
+      "D-Mart",
+      "Utilities",
+      "Direct Payment",
+      "UPI Payment",
+      "Others",
+    ],
+    Wardha: [
+      "Products and Services",
+      "Salary",
+      "Travel and Transport",
+      "Internet Recharge",
+      "Petrol",
+      "Office Rent",
+      "Electricity Bill",
+      "Others",
+    ],
+    Engineering: [
+      "Mechanical Components",
+      "Electronic",
+      "Drivers",
+      "Raw Material",
+      "Tools",
+      "Workshop Items",
+      "Prototyping and Fabrication Material",
+      "Robotics",
+      "Others",
+    ],
+  };
 
-  // If no starting balance, ask for it
+  const creditCategories = ["Direct Payment", "UPI Payment", "Salary"];
+
+  // ====== Initial Balance ======
   if (accountBalance === null) {
     const confirmInitialBalance = () => {
       const amount = parseFloat(initial);
@@ -43,10 +67,15 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
     );
   }
 
+  // ====== Handle Input Change ======
   const handleChange = (index, e) => {
     const { name, value, files } = e.target;
     const updated = [...expenseForms];
-    if (name === "category") {
+
+    if (name === "mainCategory") {
+      updated[index].mainCategory = value;
+      updated[index].category = ""; // reset subcategory on change
+    } else if (name === "category") {
       updated[index].category = value;
       updated[index].type = creditCategories.includes(value) ? "Credit" : "Debit";
     } else if (name === "receipt") {
@@ -60,15 +89,15 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
   const addExpenseRow = () => {
     setExpenseForms([
       ...expenseForms,
-      { category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }
+      { mainCategory: "", category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }
     ]);
   };
 
   const submitAllExpenses = async () => {
     const validExpenses = [];
     for (let exp of expenseForms) {
-      const { category, type, amount, receipt, date } = exp;
-      if (!category || !amount || !type || !date) {
+      const { mainCategory, category, type, amount, receipt, date } = exp;
+      if (!mainCategory || !category || !amount || !type || !date) {
         alert("Please fill all required fields.");
         return;
       }
@@ -80,6 +109,7 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
       const monthStr = new Date(date).toLocaleString("default", { month: "long" });
 
       const expenseData = {
+        mainCategory,
         category,
         type,
         amount: parsedAmount,
@@ -96,8 +126,8 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
           body: JSON.stringify(expenseData)
         });
         if (!res.ok) throw new Error("Failed to save expense");
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
         alert("Error saving expense to server");
       }
 
@@ -114,14 +144,8 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
       setExpenses([...expenses, ...validExpenses]);
     }
 
-    setExpenseForms([{ category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }]);
-    alert("Expenses saved!");
-  };
-
-  const editExpense = (index) => {
-    setEditIndex(index);
-    const exp = expenses[index];
-    setExpenseForms([{ ...exp, receipt: null }]);
+    setExpenseForms([{ mainCategory: "", category: "", type: "Debit", amount: "", receipt: null, date: "", month: "", receiptURL: "" }]);
+    alert("Expenses submitted successfully! ✅\n👉 Check Transactions page to view them.");
   };
 
   const resetMonth = () => {
@@ -133,14 +157,25 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
     <div>
       {expenseForms.map((form, idx) => (
         <div className="form" key={idx} style={{ marginBottom: "1.5rem" }}>
-          <select name="category" value={form.category} onChange={(e) => handleChange(idx, e)}>
-            <option value="">Select Category</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
+          {/* Main Category Dropdown */}
+          <select name="mainCategory" value={form.mainCategory} onChange={(e) => handleChange(idx, e)}>
+            <option value="">Select Main Category</option>
+            {Object.keys(categoryGroups).map((main) => (
+              <option key={main} value={main}>{main}</option>
             ))}
           </select>
+
+          {/* Sub Category Dropdown */}
+          {form.mainCategory && (
+            <select name="category" value={form.category} onChange={(e) => handleChange(idx, e)}>
+              <option value="">Select Sub Category</option>
+              {categoryGroups[form.mainCategory].map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          )}
 
           <input
             type="text"
@@ -167,25 +202,8 @@ const TrackerPage = ({ expenses, setExpenses, accountBalance, setAccountBalance 
         {editIndex !== null ? "💾 Save Changes" : "✅ Submit All"}
       </button>
 
-      <h2>💼 Current Balance: ₹{accountBalance}</h2>
+      <h2 style={{ marginTop: "2rem" }}>💼 Current Balance: ₹{accountBalance}</h2>
       <button onClick={resetMonth} style={{ marginTop: "1rem" }}>🔁 Reset Month</button>
-
-      <h2 style={{ marginTop: "2rem" }}>📜 Submitted Expenses</h2>
-      {expenses.length === 0 ? (
-        <p>No expenses recorded yet.</p>
-      ) : (
-        expenses.map((exp, idx) => (
-          <div key={idx} style={{ borderBottom: "1px solid #ccc", padding: "0.5rem" }}>
-            <strong>{exp.category}</strong> - ₹{exp.amount} ({exp.type}) on {exp.date}
-            {exp.receiptURL && (
-              <div>
-                <img src={exp.receiptURL} alt="Receipt" width="80" />
-              </div>
-            )}
-            <button onClick={() => editExpense(idx)} style={{ marginTop: "0.5rem" }}>✏️ Edit</button>
-          </div>
-        ))
-      )}
     </div>
   );
 };
