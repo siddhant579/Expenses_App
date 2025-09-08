@@ -1,5 +1,5 @@
 // App.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
 import TrackerPage from "./pages/TrackerPage";
 import TransactionsPage from "./pages/TransactionsPage";
@@ -10,10 +10,18 @@ const App = () => {
   const [expenses, setExpenses] = useState([]);
   const [accountBalance, setAccountBalance] = useState(10000);
 
+  // ✅ Fetch expenses only once here
+  useEffect(() => {
+    fetch("https://expenses-app-server-one.vercel.app/api/")
+      .then((res) => res.json())
+      .then((data) => setExpenses(data))
+      .catch((err) => console.error("Error fetching expenses:", err));
+  }, []);
+
   return (
     <Router>
       <div className="container dark-background">
-        <h1>Sanghamitra Expense Tracker</h1>
+        <h1 className="main-title">Sanghamitra Expense Tracker</h1>
 
         {/* Navigation */}
         <nav style={{ marginBottom: "1rem" }}>
