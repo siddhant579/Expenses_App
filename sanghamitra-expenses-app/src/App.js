@@ -1,6 +1,3 @@
-//https://expenses-app-server-one.vercel.app/api/
-
-
 // App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
