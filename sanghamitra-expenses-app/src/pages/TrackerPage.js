@@ -6,6 +6,7 @@ const getToday = () => {
   return new Date().toISOString().split("T")[0];
 };
 
+
 const TrackerPage = ({ expenses = [], setExpenses }) => {
   const [expenseForms, setExpenseForms] = useState([
     {
