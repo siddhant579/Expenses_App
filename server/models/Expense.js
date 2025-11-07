@@ -4,12 +4,23 @@ const expenseSchema = new mongoose.Schema(
   {
     mainCategory: {
       type: String,
-      required: true,
-      enum: ["Hyderabad", "Wardha", "Engineering"],
+      required: true, // Event Based / Office Based / Engineering Based
+    },
+    location: {
+      type: String,
+      required: true, // Chaibhumi / Wardha / Hyderabad / etc.
+    },
+    person: {
+      type: String,
+      required: true, // Siddhant / Mallesh / etc.
     },
     category: {
       type: String,
-      required: true,
+      required: true, // Grocery / Rent / Others / etc.
+    },
+    customCategory: {
+      type: String,
+      default: "",
     },
     type: {
       type: String,
@@ -27,14 +38,16 @@ const expenseSchema = new mongoose.Schema(
     },
     month: {
       type: String,
-      required: true,
+      required: true, // October / November etc.
     },
     receiptURL: {
       type: String,
       default: "",
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // Automatically adds createdAt, updatedAt
+  }
 );
 
 module.exports = mongoose.model("Expense", expenseSchema);
