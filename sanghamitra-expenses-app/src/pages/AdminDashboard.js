@@ -36,7 +36,7 @@ const AdminDashboard = ({ expenses: propExpenses }) => {
   };
 
   const copyRegistrationLink = () => {
-    const registrationLink = `http://localhost:3000/register?code=${orgCode}`;
+    const registrationLink = `https://expenses-app-frontend.vercel.app/register?code=${orgCode}`;
     navigator.clipboard.writeText(registrationLink);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
