@@ -82,7 +82,7 @@ const AdminDashboard = ({ expenses: propExpenses }) => {
                   <input 
                     type="text" 
                     className="form-control form-control-sm bg-white" 
-                    value={`http://localhost:3000/register?code=${orgCode}`}
+                    value={`https://expenses-app-frontend.vercel.app/register?code=${orgCode}`}
                     readOnly
                   />
                   <button
