@@ -44,6 +44,20 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    // 🧩 Multi-Tenancy Fields
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      required: true,
+      index: true, // speeds up tenant-based queries
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
   },
   {
     timestamps: true, // Automatically adds createdAt, updatedAt
