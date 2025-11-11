@@ -1,66 +1,184 @@
-//fetch("https://expenses-app-server-one.vercel.app/api/")
-//pp.js
+// App.js
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import TrackerPage from "./pages/TrackerPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import AdminDashboard from "./pages/AdminDashboard";
-import "bootstrap/dist/css/bootstrap.min.css"; // ✅ Bootstrap import
+import LoginPage from "./pages/login";
+import RegistrationPage from "./pages/Registration";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { LogOut } from "lucide-react";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
-const App = () => {
+const API_URL = "https://expenses-app-server-one.vercel.app/api";
+
+// Protected Route Component
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// Public Route Component (redirect if already logged in)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to={user?.role === 'admin' ? "/admin" : "/"} replace />;
+  }
+
+  return children;
+};
+
+// Main App Content with Navigation
+const AppContent = () => {
+  const { isAuthenticated, user, logout } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [accountBalance, setAccountBalance] = useState(10000);
 
-  // ✅ Fetch expenses only once here
+  // Fetch expenses
   useEffect(() => {
-    fetch("https://expenses-app-server-one.vercel.app/api/")
-      .then((res) => res.json())
-      .then((data) => setExpenses(data))
-      .catch((err) => console.error("Error fetching expenses:", err));
-  }, []);
+    if (isAuthenticated) {
+      fetch(`${API_URL}/`)
+        .then((res) => res.json())
+        .then((data) => setExpenses(data))
+        .catch((err) => console.error("Error fetching expenses:", err));
+    }
+  }, [isAuthenticated]);
 
   return (
     <Router>
-      {/* ✅ Full responsive container */}
       <div className="container-fluid px-3">
-        <h1 className="main-title text-center my-3">Sanghamitra Expense Tracker</h1>
+        {/* Header - Show only when authenticated */}
+        {isAuthenticated && (
+          <>
+            <div className="d-flex justify-content-between align-items-center my-3">
+              <h1 className="main-title text-center flex-grow-1">
+                Sanghamitra Expense Tracker
+              </h1>
+              <button
+                onClick={logout}
+                className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
 
-        {/* ✅ Responsive Navigation (but CSS same rahega) */}
-        <nav className="d-flex flex-wrap justify-content-center gap-3 mb-3">
-          <NavLink to="/" end>🏠 Home</NavLink>
-          <NavLink to="/transactions">📜 Transactions</NavLink>
-          <NavLink to="/admin">👑 Admin</NavLink>
-        </nav>
+            {/* Navigation - Show based on role */}
+            <nav className="d-flex flex-wrap justify-content-center gap-3 mb-3">
+              {user?.role === 'admin' ? (
+                <>
+                  <NavLink to="/admin" end>👑 Admin Dashboard</NavLink>
+                  <NavLink to="/transactions">📜 All Transactions</NavLink>
+                </>
+              ) : (
+                <>
+                  <NavLink to="/" end>🏠 Home</NavLink>
+                  <NavLink to="/transactions">📜 Transactions</NavLink>
+                </>
+              )}
+            </nav>
+          </>
+        )}
 
-        {/* ✅ Responsive content area */}
+        {/* Main Content Area */}
         <div className="row">
           <div className="col-12 col-md-10 col-lg-8 mx-auto">
             <Routes>
+              {/* Public Routes */}
               <Route
-                path="/"
+                path="/login"
                 element={
-                  <TrackerPage
-                    expenses={expenses}
-                    setExpenses={setExpenses}
-                    accountBalance={accountBalance}
-                    setAccountBalance={setAccountBalance}
-                  />
+                  <PublicRoute>
+                    <LoginPage />
+                  </PublicRoute>
                 }
               />
               <Route
-                path="/transactions"
-                element={<TransactionsPage expenses={expenses} />}
+                path="/register"
+                element={
+                  <PublicRoute>
+                    <RegistrationPage />
+                  </PublicRoute>
+                }
               />
+
+              {/* Protected Employee Routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute requiredRole="employee">
+                    <TrackerPage
+                      expenses={expenses}
+                      setExpenses={setExpenses}
+                      accountBalance={accountBalance}
+                      setAccountBalance={setAccountBalance}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Admin Routes */}
               <Route
                 path="/admin"
-                element={<AdminDashboard expenses={expenses} />}
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboard expenses={expenses} />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Shared Protected Routes */}
+              <Route
+                path="/transactions"
+                element={
+                  <ProtectedRoute>
+                    <TransactionsPage expenses={expenses} />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              {/* Catch all - redirect to appropriate dashboard */}
+              <Route
+                path="*"
+                element={
+                  <Navigate
+                    to={
+                      !isAuthenticated
+                        ? "/login"
+                        : user?.role === 'admin'
+                        ? "/admin"
+                        : "/"
+                    }
+                    replace
+                  />
+                }
               />
             </Routes>
           </div>
         </div>
       </div>
     </Router>
+  );
+};
+
+// Main App Component with Auth Provider
+const App = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 
