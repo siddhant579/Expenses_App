@@ -1,360 +1,233 @@
-import React, { useState } from "react";
-import {
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
-import "./AdminLogin.css";
+// src/pages/AdminDashboard.js
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Copy, CheckCircle, Users, DollarSign, TrendingUp, Calendar, Tag } from 'lucide-react';
 
+const API_URL = 'https://expenses-app-server-one.vercel.app/api';
 
-const logo = process.env.PUBLIC_URL + "/logo.png";
+const AdminDashboard = ({ expenses: propExpenses }) => {
+  const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [expenses, setExpenses] = useState(propExpenses || []);
 
-const USERS = [
-  { email: "superadmin@sanghamitra.com", password: "super123", role: "superadmin" },
-  { email: "admin1@sanghamitra.com", password: "admin123", role: "admin", mainCategory: "Event Based" },
-  { email: "admin2@sanghamitra.com", password: "admin123", role: "admin", mainCategory: "Office Based" },
-  { email: "admin3@sanghamitra.com", password: "admin123", role: "admin", mainCategory: "Engineering Based" },
-];
+  const orgCode = user?.organizationId?.code || 'N/A';
 
-const MAIN_CATEGORIES = ["Event Based", "Office Based", "Engineering Based"];
+  useEffect(() => {
+    if (!propExpenses || propExpenses.length === 0) {
+      fetchExpenses();
+    }
+  }, [propExpenses]);
 
-const LOCATION_GROUPS = {
-  "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
-  "Office Based": ["Wardha", "Hyderabad"],
-  "Engineering Based": ["Wardha", "Hyderabad"],
-};
-
-const PERSON_GROUPS = {
-  Hyderabad: ["Mallesh", "Shignesh", "Rakshit", "Chandu", "Shreyas"],
-  Wardha: ["Siddhant", "Mayur", "Apeksha", "Nikhil", "Vaibhav", "Prayag"],
-  Chaityabhoomi: ["Mallesh", "Shignesh", "Rakshit", "Chandu", "Shreyas", "Siddhant", "Mayur", "Apeksha", "Nikhil", "Vaibhav", "Prayag"],
-  Deekshabhoomi: ["Mallesh", "Shignesh", "Rakshit", "Chandu", "Shreyas", "Siddhant", "Mayur", "Apeksha", "Nikhil", "Vaibhav", "Prayag"],
-};
-
-const monthsList = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const yearOptions = ["2020","2021","2022","2023","2024","2025","2026","2027","2028","2029","2030"];
-
-const AdminDashboard = ({ expenses }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [role, setRole] = useState("");
-  const [selectedMainCategory, setSelectedMainCategory] = useState("All");
-  const [selectedLocation, setSelectedLocation] = useState("All");
-  const [selectedPerson, setSelectedPerson] = useState("All");
-  const [selectedMonth, setSelectedMonth] = useState("All");
-  const [selectedYear, setSelectedYear] = useState("All");
-  const [chartType, setChartType] = useState("Bar");
-
-  // ===== LOGIN =====
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const user = USERS.find((u) => u.email === email && u.password === password);
-    if (user) {
-      setIsLoggedIn(true);
-      setRole(user.role);
-      setError("");
-      if (user.role === "admin") {
-        setSelectedMainCategory(user.mainCategory);
-      }
-    } else {
-      setError("Invalid email or password!");
+  const fetchExpenses = async () => {
+    try {
+      const response = await fetch(`${API_URL}/`);
+      const data = await response.json();
+      setExpenses(data);
+    } catch (err) {
+      console.error('Error fetching expenses:', err);
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setEmail("");
-    setPassword("");
-    setRole("");
+  const copyCode = () => {
+    navigator.clipboard.writeText(orgCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  // ===== FILTER =====
-  const filteredExpenses = expenses.filter((e) => {
-    const expenseDate = new Date(e.date);
-    const monthMatch = selectedMonth === "All" || expenseDate.toLocaleString("default", { month: "long" }) === selectedMonth;
-    const yearMatch = selectedYear === "All" || expenseDate.getFullYear().toString() === selectedYear;
-    const mainMatch = selectedMainCategory === "All" || e.mainCategory === selectedMainCategory;
-    const locMatch = selectedLocation === "All" || e.location === selectedLocation;
-    const personMatch = selectedPerson === "All" || e.person === selectedPerson;
-    return monthMatch && yearMatch && mainMatch && locMatch && personMatch;
-  });
+  const copyRegistrationLink = () => {
+    const registrationLink = `http://localhost:3000/register?code=${orgCode}`;
+    navigator.clipboard.writeText(registrationLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
-  // ===== UNIFIED PERSON DATA =====
-  const unifiedPersonData = selectedPerson !== "All"
-    ? expenses.filter(e => e.person === selectedPerson)
-    : [];
+  const totalExpenses = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const avgExpense = expenses.length > 0 ? totalExpenses / expenses.length : 0;
 
-  const unifiedDebit = unifiedPersonData.filter(e => e.type === "Debit").reduce((s, e) => s + e.amount, 0);
-  const unifiedCredit = unifiedPersonData.filter(e => e.type === "Credit").reduce((s, e) => s + e.amount, 0);
+  // Group expenses by category
+  const categoryTotals = expenses.reduce((acc, exp) => {
+    acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+    return acc;
+  }, {});
 
-  // ===== DEBIT BREAKDOWN BY MAIN CATEGORY =====
-  const debitByMainCategory = {};
-  unifiedPersonData
-    .filter(e => e.type === "Debit")
-    .forEach(e => {
-      debitByMainCategory[e.mainCategory] = (debitByMainCategory[e.mainCategory] || 0) + e.amount;
-    });
-
-  const debitBreakdown = Object.entries(debitByMainCategory).map(([category, amount]) => ({
-    category,
-    amount
-  }));
-
-  // ===== CREDIT/DEBIT CHART DATA =====
-  const creditDebitData = [
-    { name: "Credit", value: unifiedCredit, color: "#42b72a" },
-    { name: "Debit", value: unifiedDebit, color: "#fa383e" }
-  ];
-
-  // ===== LOGIN PAGE =====
-  if (!isLoggedIn) {
-    return (
-      <div className="login-page">
-        <div className="login-card">
-          <img src={logo} alt="Logo" className="login-logo" />
-          <h2>Admin Login</h2>
-          {error && <div className="error-message">{error}</div>}
-          <form onSubmit={handleLogin}>
-            <input 
-              type="email" 
-              placeholder="Email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-            />
-            <input 
-              type="password" 
-              placeholder="Password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
-            />
-            <button type="submit">Login</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // ===== DASHBOARD =====
   return (
-    <div className="admin-dashboard-container">
-      <div className="dashboard-header">
-        <h1>{role === "superadmin" ? "🌟 SuperAdmin Dashboard" : "👑 Admin Dashboard"}</h1>
-        <button onClick={handleLogout} className="logout-btn">Logout</button>
-      </div>
-
-      {/* Filters */}
-      <div className="filters-container">
-        <label>🏢 Main Category:</label>
-        <select value={selectedMainCategory} onChange={(e) => {
-          setSelectedMainCategory(e.target.value);
-          setSelectedLocation("All");
-          setSelectedPerson("All");
-        }}>
-          <option value="All">All</option>
-          {MAIN_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        {selectedMainCategory !== "All" && (
-          <>
-            <label>📍 Location:</label>
-            <select value={selectedLocation} onChange={(e) => {
-              setSelectedLocation(e.target.value);
-              setSelectedPerson("All");
-            }}>
-              <option value="All">All</option>
-              {LOCATION_GROUPS[selectedMainCategory].map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        {selectedLocation !== "All" && (
-          <>
-            <label>👥 Person:</label>
-            <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)}>
-              <option value="All">All</option>
-              {PERSON_GROUPS[selectedLocation].map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        <label>📅 Month:</label>
-        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-          <option value="All">All</option>
-          {monthsList.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-
-        <label>🗓 Year:</label>
-        <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-          <option value="All">All</option>
-          {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
-
-      {/* Unified Person Summary */}
-      {selectedPerson !== "All" && (
-        <div className="unified-summary">
-          <h2>📋 Full Summary for {selectedPerson}</h2>
-          
-          <div className="summary-stats">
-            <div className="summary-stat">
-              <strong>🟢 Total Credit:</strong> ₹{unifiedCredit.toLocaleString("en-IN")}
+    <div className="container py-4">
+      {/* Welcome & Organization Code Card */}
+      <div className="card mb-4 border-0 shadow-sm">
+        <div className="card-body">
+          <div className="row align-items-center">
+            <div className="col-md-8">
+              <h4 className="mb-2">Welcome, {user?.name}! 👑</h4>
+              <p className="text-muted mb-0">
+                Organization: <strong>{user?.organizationId?.name}</strong>
+              </p>
             </div>
-            <div className="summary-stat">
-              <strong>🔴 Total Debit:</strong> ₹{unifiedDebit.toLocaleString("en-IN")}
-            </div>
-            <div className="summary-stat">
-              <strong>💰 Net Balance:</strong> ₹{(unifiedCredit - unifiedDebit).toLocaleString("en-IN")}
-            </div>
-          </div>
-
-          {/* Chart Type and Debit Breakdown */}
-          <div className="chart-controls">
-            <div>
-              <label>Chart Type: </label>
-              <select value={chartType} onChange={(e) => setChartType(e.target.value)}>
-                <option value="Bar">Bar Chart</option>
-                <option value="Pie">Pie Chart</option>
-              </select>
-            </div>
-            
-            {/* Debit Breakdown by Main Category */}
-            <div className="debit-breakdown">
-              <label>🔴 Debit Breakdown:</label>
-              <div className="breakdown-items">
-                {debitBreakdown.map((item, index) => (
-                  <div key={index} className="breakdown-item">
-                    <strong>{item.category}:</strong> ₹{item.amount.toLocaleString("en-IN")}
-                  </div>
-                ))}
-                {debitBreakdown.length === 0 && (
-                  <div className="breakdown-empty">
-                    No debit transactions
-                  </div>
-                )}
+            <div className="col-md-4 mt-3 mt-md-0">
+              <div className="alert alert-primary mb-0">
+                <p className="small mb-2 fw-semibold">Share this code with employees:</p>
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <code className="flex-grow-1 bg-white px-3 py-2 rounded border border-primary">
+                    {orgCode}
+                  </code>
+                  <button
+                    onClick={copyCode}
+                    className="btn btn-primary btn-sm"
+                    title="Copy code"
+                  >
+                    {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                  </button>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm bg-white" 
+                    value={`http://localhost:3000/register?code=${orgCode}`}
+                    readOnly
+                  />
+                  <button
+                    onClick={copyRegistrationLink}
+                    className="btn btn-success btn-sm text-nowrap"
+                    title="Copy registration link"
+                  >
+                    {linkCopied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                    <span className="ms-1 d-none d-sm-inline">
+                      {linkCopied ? 'Copied!' : 'Copy Link'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="chart-container">
-            <ResponsiveContainer width="100%" height={300}>
-              {chartType === "Bar" ? (
-                <BarChart data={creditDebitData}>
-                  <XAxis dataKey="name" stroke="#b0b3b8" />
-                  <YAxis stroke="#b0b3b8" />
-                  <Tooltip 
-                    formatter={(value) => [`₹${value.toLocaleString("en-IN")}`, "Amount"]}
-                    contentStyle={{ backgroundColor: '#242526', border: '1px solid #3a3b3c', color: '#e4e6ea' }}
-                  />
-                  <Bar dataKey="value" fill="#8884d8">
-                    {creditDebitData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              ) : (
-                <PieChart>
-                  <Pie
-                    data={creditDebitData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ name, value }) => `${name}: ₹${value.toLocaleString("en-IN")}`}
-                  >
-                    {creditDebitData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`₹${value.toLocaleString("en-IN")}`, "Amount"]}
-                    contentStyle={{ backgroundColor: '#242526', border: '1px solid #3a3b3c', color: '#e4e6ea' }}
-                  />
-                  <Legend />
-                </PieChart>
-              )}
-            </ResponsiveContainer>
+      {/* Statistics Cards */}
+      <div className="row g-3 mb-4">
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                  <DollarSign className="text-success" size={28} />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1 small">Total Expenses</h6>
+                  <h3 className="mb-0 fw-bold">₹{totalExpenses.toFixed(2)}</h3>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                  <Users className="text-primary" size={28} />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1 small">Total Transactions</h6>
+                  <h3 className="mb-0 fw-bold">{expenses.length}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                  <TrendingUp className="text-info" size={28} />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1 small">Avg Transaction</h6>
+                  <h3 className="mb-0 fw-bold">₹{avgExpense.toFixed(2)}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Main Category</th>
-                <th>Location</th>
-                <th>Category</th>
-                <th>Type</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {unifiedPersonData.map((e, i) => (
-                <tr key={i}>
-                  <td>{new Date(e.date).toLocaleDateString()}</td>
-                  <td>{e.mainCategory}</td>
-                  <td>{e.location}</td>
-                  <td>{e.category}</td>
-                  <td>{e.type}</td>
-                  <td>₹{e.amount.toLocaleString("en-IN")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Category Breakdown */}
+      {Object.keys(categoryTotals).length > 0 && (
+        <div className="card mb-4 border-0 shadow-sm">
+          <div className="card-header bg-white border-0 pt-4">
+            <h5 className="mb-0">Expense by Category</h5>
+          </div>
+          <div className="card-body">
+            <div className="row g-3">
+              {Object.entries(categoryTotals)
+                .sort((a, b) => b[1] - a[1])
+                .map(([category, total]) => (
+                  <div key={category} className="col-md-6 col-lg-3">
+                    <div className="border rounded p-3">
+                      <div className="d-flex align-items-center mb-2">
+                        <Tag size={18} className="text-primary me-2" />
+                        <h6 className="mb-0">{category}</h6>
+                      </div>
+                      <h4 className="mb-0 text-success">₹{total.toFixed(2)}</h4>
+                      <small className="text-muted">
+                        {((total / totalExpenses) * 100).toFixed(1)}% of total
+                      </small>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Normal Filtered Transactions */}
-      <div className="transactions-section">
-        <h3>Filtered Transactions</h3>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Main Category</th>
-              <th>Location</th>
-              <th>Person</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredExpenses.length === 0 ? (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', color: '#5f9dedff' }}>
-                  No transactions found.
-                </td>
-              </tr>
-            ) : (
-              filteredExpenses.map((e, i) => (
-                <tr key={i}>
-                  <td>{new Date(e.date).toLocaleDateString()}</td>
-                  <td>{e.mainCategory}</td>
-                  <td>{e.location}</td>
-                  <td>{e.person}</td>
-                  <td>{e.category}</td>
-                  <td>{e.type}</td>
-                  <td>₹{e.amount.toLocaleString("en-IN")}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Recent Transactions Table */}
+      <div className="card border-0 shadow-sm">
+        <div className="card-header bg-white border-0 pt-4">
+          <h5 className="mb-0">Recent Transactions</h5>
+        </div>
+        <div className="card-body p-0">
+          {expenses.length === 0 ? (
+            <div className="text-center py-5 text-muted">
+              <Calendar size={48} className="mb-3 opacity-50" />
+              <p className="mb-0">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="bg-light">
+                  <tr>
+                    <th className="border-0">Description</th>
+                    <th className="border-0">Category</th>
+                    <th className="border-0">Amount</th>
+                    <th className="border-0">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.slice(0, 15).map((expense, idx) => (
+                    <tr key={idx}>
+                      <td className="align-middle">{expense.description}</td>
+                      <td className="align-middle">
+                        <span className="badge bg-primary bg-opacity-10 text-primary">
+                          {expense.category}
+                        </span>
+                      </td>
+                      <td className="align-middle fw-bold text-success">
+                        ₹{expense.amount?.toFixed(2)}
+                      </td>
+                      <td className="align-middle text-muted">
+                        {new Date(expense.date).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
