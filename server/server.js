@@ -9,7 +9,14 @@ const expensesRoutes = require("./routes/expenseRoutes");
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://expenses-app-frontend.vercel.app", // allow only your frontend
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true, // allow cookies or auth headers
+  })
+);
+
 app.use(express.json());
 
 // Test route to check server connection
