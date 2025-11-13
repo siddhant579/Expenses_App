@@ -1,30 +1,24 @@
-// const res = await fetch("https://expenses-app-server-one.vercel.app/api/", {
-
 import React, { useState } from "react";
+import { Camera, Upload, X, CheckCircle } from "lucide-react";
 
 const getToday = () => {
   return new Date().toISOString().split("T")[0];
 };
-
 
 const TrackerPage = ({ expenses = [], setExpenses }) => {
   const [expenseForms, setExpenseForms] = useState([
     {
       mainCategory: "",
       location: "",
-      person: "",
       category: "",
       customCategory: "",
       type: "",
       amount: "",
       receipt: null,
       date: getToday(),
-      month: "",
       receiptURL: "",
     },
   ]);
-
-  const [editIndex, setEditIndex] = useState(null);
 
   const mainCategories = ["Event Based", "Office Based", "Engineering Based"];
 
@@ -32,37 +26,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
     "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
     "Office Based": ["Wardha", "Hyderabad"],
     "Engineering Based": ["Hyderabad", "Wardha"],
-  };
-
-  const personGroups = {
-    Hyderabad: ["Mallesh", "Shignesh", "Rakshit", "Chandu", "Shreyas"],
-    Wardha: ["Siddhant", "Mayur", "Apeksha", "Nikhil", "Vaibhav", "Prayag"],
-    Chaityabhoomi: [
-      "Mallesh",
-      "Shignesh",
-      "Rakshit",
-      "Chandu",
-      "Shreyas",
-      "Siddhant",
-      "Mayur",
-      "Apeksha",
-      "Nikhil",
-      "Vaibhav",
-      "Prayag",
-    ],
-    Deekshabhoomi: [
-      "Mallesh",
-      "Shignesh",
-      "Rakshit",
-      "Chandu",
-      "Shreyas",
-      "Siddhant",
-      "Mayur",
-      "Apeksha",
-      "Nikhil",
-      "Vaibhav",
-      "Prayag",
-    ],
   };
 
   const commonCategories = [
@@ -99,7 +62,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
         ...updated[index],
         mainCategory: value,
         location: "",
-        person: "",
         category: "",
         type: "",
       };
@@ -107,12 +69,9 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       updated[index] = {
         ...updated[index],
         location: value,
-        person: "",
         category: "",
         type: "",
       };
-    } else if (name === "person") {
-      updated[index] = { ...updated[index], person: value };
     } else if (name === "category") {
       updated[index].category = value;
       updated[index].customCategory = "";
@@ -139,14 +98,12 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       {
         mainCategory: "",
         location: "",
-        person: "",
         category: "",
         customCategory: "",
         type: "",
         amount: "",
         receipt: null,
         date: getToday(),
-        month: "",
         receiptURL: "",
       },
     ]);
@@ -171,7 +128,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       const {
         mainCategory,
         location,
-        person,
         category,
         customCategory,
         type,
@@ -182,7 +138,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       if (
         !mainCategory ||
         !location ||
-        !person ||
         !category ||
         !type ||
         !amount ||
@@ -200,7 +155,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       const expenseData = {
         mainCategory,
         location,
-        person,
         category: customCategory || category,
         type,
         amount: parsedAmount,
@@ -218,33 +172,25 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       } catch (err) {
         console.error(err);
         alert("❌ Error saving expense to server");
+        return;
       }
 
       validExpenses.push(expenseData);
     }
 
     const currentExpenses = Array.isArray(expenses) ? expenses : [];
-    if (editIndex !== null) {
-      const updatedExpenses = [...currentExpenses];
-      updatedExpenses[editIndex] = validExpenses[0];
-      setExpenses(updatedExpenses);
-      setEditIndex(null);
-    } else {
-      setExpenses([...currentExpenses, ...validExpenses]);
-    }
+    setExpenses([...currentExpenses, ...validExpenses]);
 
     setExpenseForms([
       {
         mainCategory: "",
         location: "",
-        person: "",
         category: "",
         customCategory: "",
         type: "",
         amount: "",
         receipt: null,
         date: getToday(),
-        month: "",
         receiptURL: "",
       },
     ]);
@@ -252,163 +198,252 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
     alert("✅ Expense added successfully!");
   };
 
-  const resetMonth = () => {
-    setExpenses([]);
-    alert("🔁 All expenses cleared for this month.");
-  };
-
   return (
-    <div className="tracker-container">
-      {expenseForms.map((form, idx) => (
-        <div className="expense-card" key={idx}>
-          <select
-            name="mainCategory"
-            value={form.mainCategory}
-            onChange={(e) => handleChange(idx, e)}
-          >
-            <option value="">📂 Select Expense Type</option>
-            {mainCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+    <div className="container py-4">
+      <div className="row justify-content-center">
+        <div className="col-12 col-lg-10">
+          {expenseForms.map((form, idx) => (
+            <div className="card shadow-sm mb-4 border-0" key={idx}>
+              <div className="card-body p-4">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h5 className="mb-0 text-primary">
+                    <span className="badge bg-primary me-2">{idx + 1}</span>
+                    Expense Entry
+                  </h5>
+                  {expenseForms.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => deleteExpenseRow(idx)}
+                      className="btn btn-outline-danger btn-sm"
+                    >
+                      <X size={16} className="me-1" />
+                      Remove
+                    </button>
+                  )}
+                </div>
 
-          {form.mainCategory && (
-            <select
-              name="location"
-              value={form.location}
-              onChange={(e) => handleChange(idx, e)}
-            >
-              <option value="">📍 Select Project / Site</option>
-              {locationGroups[form.mainCategory].map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-          )}
+                <div className="row g-3">
+                  {/* Main Category */}
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">
+                      <span className="text-danger me-1">*</span>
+                      Expense Type
+                    </label>
+                    <select
+                      name="mainCategory"
+                      value={form.mainCategory}
+                      onChange={(e) => handleChange(idx, e)}
+                      className="form-select"
+                    >
+                      <option value="">Select Type...</option>
+                      {mainCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-          {form.location && (
-            <select
-              name="person"
-              value={form.person}
-              onChange={(e) => handleChange(idx, e)}
-            >
-              <option value="">👥 Select Team Member</option>
-              {personGroups[form.location].map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          )}
+                  {/* Location */}
+                  {form.mainCategory && (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        <span className="text-danger me-1">*</span>
+                        Project / Site
+                      </label>
+                      <select
+                        name="location"
+                        value={form.location}
+                        onChange={(e) => handleChange(idx, e)}
+                        className="form-select"
+                      >
+                        <option value="">Select Location...</option>
+                        {locationGroups[form.mainCategory].map((loc) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-          {form.person && (
-            <select
-              name="category"
-              value={form.category}
-              onChange={(e) => handleChange(idx, e)}
-            >
-              <option value="">💰 Select Expense Category</option>
-              {commonCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          )}
+                  {/* Category */}
+                  {form.location && (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        <span className="text-danger me-1">*</span>
+                        Expense Category
+                      </label>
+                      <select
+                        name="category"
+                        value={form.category}
+                        onChange={(e) => handleChange(idx, e)}
+                        className="form-select"
+                      >
+                        <option value="">Select Category...</option>
+                        {commonCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-          {(form.category === "Others" ||
-            form.category === "Products and Services") && (
-            <input
-              type="text"
-              name="customCategory"
-              value={form.customCategory}
-              onChange={(e) => handleChange(idx, e)}
-              placeholder="Enter custom details..."
-            />
-          )}
+                  {/* Custom Category */}
+                  {(form.category === "Others" ||
+                    form.category === "Products and Services") && (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">
+                        Custom Details
+                      </label>
+                      <input
+                        type="text"
+                        name="customCategory"
+                        value={form.customCategory}
+                        onChange={(e) => handleChange(idx, e)}
+                        placeholder="Enter details..."
+                        className="form-control"
+                      />
+                    </div>
+                  )}
 
-          {form.category && (
-            <input
-              className={`type-field ${form.type.toLowerCase()}`}
-              type="text"
-              value={form.type}
-              readOnly
-            />
-          )}
+                  {/* Type */}
+                  {form.category && (
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Type</label>
+                      <input
+                        className={`form-control fw-bold ${
+                          form.type === "Credit"
+                            ? "text-success bg-success bg-opacity-10"
+                            : "text-danger bg-danger bg-opacity-10"
+                        }`}
+                        type="text"
+                        value={form.type}
+                        readOnly
+                      />
+                    </div>
+                  )}
 
-          <input
-            name="amount"
-            value={form.amount}
-            onChange={(e) => handleChange(idx, e)}
-            placeholder="Amount (₹)"
-            type="number"
-          />
+                  {/* Amount */}
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">
+                      <span className="text-danger me-1">*</span>
+                      Amount (₹)
+                    </label>
+                    <input
+                      name="amount"
+                      value={form.amount}
+                      onChange={(e) => handleChange(idx, e)}
+                      placeholder="0.00"
+                      type="number"
+                      step="0.01"
+                      className="form-control"
+                    />
+                  </div>
 
-          <input
-            type="date"
-            name="date"
-            value={form.date}
-            onChange={(e) => handleChange(idx, e)}
-          />
-
-          <div className="receipt-section">
-            {!form.receipt ? (
-              <label className="receipt-button">
-                🧾 Upload Receipt
-                <input
-                  type="file"
-                  name="receipt"
-                  accept="image/*,application/pdf"
-                  capture="environment"   // ✅ CAMERA + FILE PICKER
-                  onChange={(e) => handleChange(idx, e)}
-                  style={{ display: "none" }}
-                />
-              </label>
-            ) : (
-              <div className="receipt-preview">
-                {form.receipt.type.startsWith("image/") ? (
-                  <img
-                    src={form.receiptURL}
-                    alt="Receipt"
-                    width="60"
-                    height="60"
-                    style={{
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <span>📄 {form.receipt.name}</span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeReceipt(idx)}
-                  className="delete-receipt-btn"
-                >
-                  ❌
-                </button>
+                  {/* Receipt Upload */}
+                  <div className="col-12">
+                    <label className="form-label fw-semibold">
+                      Upload Receipt (Optional)
+                    </label>
+                    
+                    {!form.receipt ? (
+                      <div className="d-flex gap-2">
+                        <label className="btn btn-outline-primary flex-grow-1">
+                          <Camera size={18} className="me-2" />
+                          Take Photo
+                          <input
+                            type="file"
+                            name="receipt"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => handleChange(idx, e)}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                        <label className="btn btn-outline-secondary flex-grow-1">
+                          <Upload size={18} className="me-2" />
+                          Choose File
+                          <input
+                            type="file"
+                            name="receipt"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => handleChange(idx, e)}
+                            style={{ display: "none" }}
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="card bg-light">
+                        <div className="card-body p-3">
+                          <div className="d-flex align-items-center gap-3">
+                            {form.receipt.type.startsWith("image/") ? (
+                              <img
+                                src={form.receiptURL}
+                                alt="Receipt"
+                                className="rounded"
+                                style={{
+                                  width: "80px",
+                                  height: "80px",
+                                  objectFit: "cover",
+                                  border: "2px solid #dee2e6",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="d-flex align-items-center justify-content-center rounded bg-white"
+                                style={{
+                                  width: "80px",
+                                  height: "80px",
+                                  border: "2px solid #dee2e6",
+                                }}
+                              >
+                                <span className="fs-1">📄</span>
+                              </div>
+                            )}
+                            <div className="flex-grow-1">
+                              <p className="mb-1 fw-semibold text-truncate">
+                                {form.receipt.name}
+                              </p>
+                              <p className="mb-0 text-muted small">
+                                {(form.receipt.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeReceipt(idx)}
+                              className="btn btn-danger btn-sm"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+          ))}
+
+          {/* Action Buttons */}
+          <div className="d-flex gap-3 justify-content-center mb-4">
+            <button
+              onClick={addExpenseRow}
+              className="btn btn-outline-primary px-4"
+            >
+              ➕ Add Another Entry
+            </button>
+            <button
+              onClick={submitAllExpenses}
+              className="btn btn-success px-5 fw-semibold"
+            >
+              <CheckCircle size={18} className="me-2" />
+              Submit
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => deleteExpenseRow(idx)}
-            className="delete-button"
-          >
-            🗑️ Delete
-          </button>
         </div>
-      ))}
-
-      <div className="tracker-buttons">
-        <button onClick={addExpenseRow}>➕ Add Another</button>
-        <button onClick={submitAllExpenses}>✅ Submit All</button>
-        <button onClick={resetMonth}>🔁 Reset</button>
       </div>
     </div>
   );
