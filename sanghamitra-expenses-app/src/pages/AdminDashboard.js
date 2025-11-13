@@ -1,7 +1,5 @@
-// src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Copy, CheckCircle, Users, DollarSign, TrendingUp, Calendar, Tag, User, Eye } from 'lucide-react';
 
 const API_URL = 'https://expenses-app-server-one.vercel.app/api';
 
@@ -9,7 +7,6 @@ const AdminDashboard = () => {
   const { user, token } = useAuth();
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [stats, setStats] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -32,21 +29,12 @@ const AdminDashboard = () => {
       const expensesData = await expensesResponse.json();
       setAllExpenses(expensesData);
 
-      // Fetch statistics
-      const statsResponse = await fetch(`${API_URL}/expenses/stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const statsData = await statsResponse.json();
-      setStats(statsData);
-
       // Fetch employees list
       const employeesResponse = await fetch(`${API_URL}/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const employeesData = await employeesResponse.json();
       setEmployees(employeesData);
-
-      console.log('Dashboard Data:', { stats: statsData, employees: employeesData, expenses: expensesData });
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -125,6 +113,17 @@ const AdminDashboard = () => {
     categoryTotals[category].count += 1;
   });
 
+  // Calculate credit and debit totals
+  const totalCredit = allExpenses
+    .filter(e => e.type === 'Credit')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+    
+  const totalDebit = allExpenses
+    .filter(e => e.type === 'Debit')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  const netBalance = totalCredit - totalDebit;
+
   return (
     <div className="container py-4">
       {/* Welcome & Organization Code Card */}
@@ -145,7 +144,7 @@ const AdminDashboard = () => {
                     {orgCode}
                   </code>
                   <button onClick={copyCode} className="btn btn-primary btn-sm" title="Copy code">
-                    {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                    {copied ? '✓' : '📋'}
                   </button>
                 </div>
                 <div className="d-flex align-items-center gap-2">
@@ -156,7 +155,7 @@ const AdminDashboard = () => {
                     readOnly
                   />
                   <button onClick={copyRegistrationLink} className="btn btn-success btn-sm text-nowrap">
-                    {linkCopied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                    {linkCopied ? '✓' : '📋'}
                     <span className="ms-1 d-none d-sm-inline">
                       {linkCopied ? 'Copied!' : 'Link'}
                     </span>
@@ -177,11 +176,11 @@ const AdminDashboard = () => {
                 <div>
                   <p className="mb-1 opacity-75 small">Total Credit</p>
                   <h3 className="mb-0 fw-bold">
-                    ₹{allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
+                    ₹{totalCredit.toFixed(2)}
                   </h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <DollarSign size={28} />
+                  💹
                 </div>
               </div>
             </div>
@@ -194,11 +193,11 @@ const AdminDashboard = () => {
                 <div>
                   <p className="mb-1 opacity-75 small">Total Debit</p>
                   <h3 className="mb-0 fw-bold">
-                    ₹{allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
+                    ₹{totalDebit.toFixed(2)}
                   </h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <TrendingUp size={28} />
+                  📉
                 </div>
               </div>
             </div>
@@ -210,10 +209,10 @@ const AdminDashboard = () => {
               <div className="d-flex align-items-center justify-content-between">
                 <div>
                   <p className="mb-1 opacity-75 small">Net Balance</p>
-                  <h3 className="mb-0 fw-bold">₹{(totalExpenses - allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0) + allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0)).toFixed(2)}</h3>
+                  <h3 className="mb-0 fw-bold">₹{netBalance.toFixed(2)}</h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <DollarSign size={28} />
+                  💰
                 </div>
               </div>
             </div>
@@ -228,7 +227,7 @@ const AdminDashboard = () => {
                   <h3 className="mb-0 fw-bold">{transactionCount}</h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <Users size={28} />
+                  👥
                 </div>
               </div>
             </div>
@@ -243,7 +242,7 @@ const AdminDashboard = () => {
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                  <Users className="text-primary" size={28} />
+                  👥
                 </div>
                 <div>
                   <h6 className="text-muted mb-1 small">Active Employees</h6>
@@ -258,7 +257,7 @@ const AdminDashboard = () => {
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
-                  <TrendingUp className="text-success" size={28} />
+                  📊
                 </div>
                 <div>
                   <h6 className="text-muted mb-1 small">Avg Transaction</h6>
@@ -275,15 +274,11 @@ const AdminDashboard = () => {
       {/* Employees Overview */}
       <div className="card mb-4 border-0 shadow-sm">
         <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0 d-flex align-items-center">
-            <Users className="me-2" size={20} />
-            Employees Overview
-          </h5>
+          <h5 className="mb-0">👥 Employees Overview</h5>
         </div>
         <div className="card-body p-0">
           {employees.length === 0 ? (
             <div className="text-center py-5 text-muted">
-              <Users size={48} className="mb-3 opacity-50" />
               <p className="mb-0">No employees yet. Share your organization code!</p>
             </div>
           ) : (
@@ -306,7 +301,7 @@ const AdminDashboard = () => {
                         <td className="align-middle">
                           <div className="d-flex align-items-center">
                             <div className="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
-                              <User size={16} className="text-primary" />
+                              👤
                             </div>
                             <strong>{emp.name}</strong>
                           </div>
@@ -325,7 +320,7 @@ const AdminDashboard = () => {
                             data-bs-toggle="modal"
                             data-bs-target="#employeeModal"
                           >
-                            <Eye size={16} />
+                            👁️
                           </button>
                         </td>
                       </tr>
@@ -342,7 +337,7 @@ const AdminDashboard = () => {
       {Object.keys(categoryTotals).length > 0 && (
         <div className="card mb-4 border-0 shadow-sm">
           <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">Expense by Category</h5>
+            <h5 className="mb-0">🏷️ Expense by Category</h5>
           </div>
           <div className="card-body">
             <div className="row g-3">
@@ -352,8 +347,8 @@ const AdminDashboard = () => {
                   <div key={category} className="col-md-6 col-lg-3">
                     <div className="border rounded p-3">
                       <div className="d-flex align-items-center mb-2">
-                        <Tag size={18} className="text-primary me-2" />
-                        <h6 className="mb-0">{category}</h6>
+                        🏷️
+                        <h6 className="mb-0 ms-2">{category}</h6>
                       </div>
                       <h4 className="mb-0 text-success">₹{data.total.toFixed(2)}</h4>
                       <small className="text-muted">
@@ -370,12 +365,11 @@ const AdminDashboard = () => {
       {/* All Transactions */}
       <div className="card border-0 shadow-sm">
         <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0">All Transactions</h5>
+          <h5 className="mb-0">📜 All Transactions</h5>
         </div>
         <div className="card-body p-0">
           {allExpenses.length === 0 ? (
             <div className="text-center py-5 text-muted">
-              <Calendar size={48} className="mb-3 opacity-50" />
               <p className="mb-0">No transactions yet</p>
             </div>
           ) : (
@@ -384,7 +378,6 @@ const AdminDashboard = () => {
                 <thead className="bg-light">
                   <tr>
                     <th className="border-0">Employee</th>
-                    <th className="border-0">Person</th>
                     <th className="border-0">Category</th>
                     <th className="border-0">Location</th>
                     <th className="border-0">Type</th>
@@ -400,7 +393,6 @@ const AdminDashboard = () => {
                           {expense.userId?.name || 'Unknown'}
                         </small>
                       </td>
-                      <td className="align-middle">{expense.person || '-'}</td>
                       <td className="align-middle">
                         <span className="badge bg-primary bg-opacity-10 text-primary">
                           {expense.category}
