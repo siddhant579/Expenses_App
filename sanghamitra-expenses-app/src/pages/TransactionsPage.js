@@ -1,220 +1,223 @@
 import React, { useState } from "react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
-const TransactionsPage = ({ expenses }) => {
+const TransactionsPage = ({ expenses = [] }) => {
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
-  const [selectedMainCategory, setSelectedMainCategory] = useState("All");
-  const [selectedLocation, setSelectedLocation] = useState("All");
+  const [sortOrder, setSortOrder] = useState("Descending"); // 🔹 Sort state
 
   const monthsList = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
   ];
+  const yearOptions = ["2023","2024","2025","2026","2027"];
 
-  // 🔹 Years till 2030
-  const yearOptions = [
-    "2020","2021","2022","2023","2024","2025",
-    "2026","2027","2028","2029","2030"
-  ];
-
-  // 🔹 Fixed main categories
-  const mainCategories = [
-    "Event Based",
-    "Office Based",
-    "Engineering Based"
-  ];
-
-  // 🔹 Location groups (same logic as TrackerPage)
-  const locationGroups = {
-    "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
-    "Office Based": ["Wardha", "Hyderabad"],
-    "Engineering Based": ["Hyderabad", "Wardha"],
-  };
-
-  // 🔹 Filter calculation
-  const calculateTotalsFor = (month, year, mainCat, loc) => {
+  // 🔹 Filter logic
+  const calculateTotalsFor = (month, year) => {
     const filtered = expenses.filter((e) => {
       const expenseDate = new Date(e.date);
-
       const monthMatch =
         month === "All" ||
         expenseDate.toLocaleString("default", { month: "long" }) === month;
-
       const yearMatch =
-        year === "All" ||
-        expenseDate.getFullYear().toString() === year;
-
-      const mainMatch =
-        mainCat === "All" || e.mainCategory === mainCat;
-
-      const locMatch =
-        loc === "All" || e.location === loc;
-
-      return monthMatch && yearMatch && mainMatch && locMatch;
+        year === "All" || expenseDate.getFullYear().toString() === year;
+      return monthMatch && yearMatch;
     });
 
-    const credit = filtered.filter((e) => e.type === "Credit")
+    const credit = filtered
+      .filter((e) => e.type === "Credit")
       .reduce((sum, e) => sum + e.amount, 0);
 
-    const debit = filtered.filter((e) => e.type === "Debit")
+    const debit = filtered
+      .filter((e) => e.type === "Debit")
       .reduce((sum, e) => sum + e.amount, 0);
 
     return { credit, debit, net: credit - debit, list: filtered };
   };
 
-  const { credit: totalCredit, debit: totalDebit, net: currentNet, list: filtered } =
-    calculateTotalsFor(selectedMonth, selectedYear, selectedMainCategory, selectedLocation);
-
-  let carryOver = 0;
-  if (selectedMonth !== "All" && selectedYear !== "All") {
-    const monthIndex = monthsList.indexOf(selectedMonth);
-    const yearNum = parseInt(selectedYear);
-    let prevMonth = "";
-    let prevYear = yearNum;
-
-    if (monthIndex > 0) {
-      prevMonth = monthsList[monthIndex - 1];
-    } else {
-      prevMonth = "December";
-      prevYear = yearNum - 1;
-    }
-
-    const { net: prevNet } = calculateTotalsFor(
-      prevMonth,
-      prevYear.toString(),
-      selectedMainCategory,
-      selectedLocation
-    );
-    carryOver = prevNet;
-  }
-
-  const getTotalByCategory = () => {
-    const totals = {};
-    filtered.forEach((expense) => {
-      const key = `${expense.category}-${expense.type}`;
-      if (!totals[key]) totals[key] = 0;
-      totals[key] += expense.amount;
-    });
-    return totals;
-  };
-  const categoryTotals = getTotalByCategory();
-
-  const finalBalance = carryOver + currentNet;
+  const { credit, debit, net, list: filteredUnsorted } = calculateTotalsFor(selectedMonth, selectedYear);
   const formatCurrency = (num) => "₹" + (num || 0).toLocaleString("en-IN");
 
-  return (
-    <div>
-      <h1>Transactions</h1>
+  // 🔹 Sorting
+  const filtered = [...filteredUnsorted].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return sortOrder === "Ascending" ? dateA - dateB : dateB - dateA;
+  });
 
-      {/* Filters Section */}
+  // ✅ Chart data
+  const pieData = [
+    { name: "Credit", value: credit },
+    { name: "Debit", value: debit },
+  ];
+  const COLORS = ["#00C49F", "#FF4C4C"];
+
+  const monthlyData = monthsList.map((month) => {
+    const { credit, debit } = calculateTotalsFor(month, selectedYear);
+    return { month, Credit: credit, Debit: debit };
+  });
+
+  return (
+    <div style={{ padding: "1.5rem" }}>
+      {/* 🔹 Filters, Summary & Charts Section */}
+      <div
+        style={{
+          backgroundColor: "#f8f9ff",
+          borderRadius: "14px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          padding: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        {/* Filters */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1.5rem",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <div>
+            <label>📅 Month:</label><br />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              style={dropdownStyle}
+            >
+              <option value="All">All</option>
+              {monthsList.map((month, i) => (
+                <option key={i} value={month}>{month}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label>🗓️ Year:</label><br />
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              style={dropdownStyle}
+            >
+              <option value="All">All</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Credit / Debit Summary + Charts */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "2rem",
+          }}
+        >
+          {/* Summary */}
+          <div style={{ minWidth: "250px" }}>
+            <div style={{ ...summaryBox, color: "green" }}>
+              🟢 Credit: {formatCurrency(credit)}
+            </div>
+            <div style={{ ...summaryBox, color: "red" }}>
+              🔴 Debit: {formatCurrency(debit)}
+            </div>
+            <div
+              style={{
+                ...summaryBox,
+                color: net >= 0 ? "blue" : "darkred",
+              }}
+            >
+              💼 Final Balance: {formatCurrency(net)}
+            </div>
+          </div>
+
+          {/* Pie Chart */}
+          <div style={{ width: "300px", height: "250px" }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bar Chart */}
+          <div style={{ width: "500px", height: "250px" }}>
+            <ResponsiveContainer>
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="Credit" fill="#00C49F" />
+                <Bar dataKey="Debit" fill="#FF4C4C" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* 🔹 All Transactions Section */}
       <div
         style={{
           display: "flex",
-          gap: "1rem",
+          justifyContent: "space-between",
           alignItems: "center",
-          flexWrap: "wrap",
           marginBottom: "1rem",
+          flexWrap: "wrap",
+          gap: "1rem",
         }}
       >
-        {/* 🔹 Main Category */}
-        <label htmlFor="mainCat">🏢 Main Category:</label>
-        <select
-          id="mainCat"
-          value={selectedMainCategory}
-          onChange={(e) => {
-            setSelectedMainCategory(e.target.value);
-            setSelectedLocation("All");
-          }}
-        >
-          <option value="All">All</option>
-          {mainCategories.map((cat, i) => (
-            <option key={i} value={cat}>{cat}</option>
-          ))}
-        </select>
-
-        {/* 🔹 Location Dropdown (appears when mainCategory is selected) */}
-        {selectedMainCategory !== "All" && (
-          <>
-            <label htmlFor="location">📍 Location:</label>
-            <select
-              id="location"
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-            >
-              <option value="All">All</option>
-              {locationGroups[selectedMainCategory]?.map((loc, i) => (
-                <option key={i} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        {/* 🔹 Month Filter */}
-        <label htmlFor="month">📅 Month:</label>
-        <select
-          id="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        >
-          <option value="All">All</option>
-          {monthsList.map((month, i) => (
-            <option key={i} value={month}>{month}</option>
-          ))}
-        </select>
-
-        {/* 🔹 Year Filter */}
-        <label htmlFor="year">🗓️ Year:</label>
-        <select
-          id="year"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-        >
-          <option value="All">All</option>
-          {yearOptions.map((year) => (
-            <option key={year} value={year}>{year}</option>
-          ))}
-        </select>
+        <h3 style={{ margin: 0 }}>All Transactions</h3>
+        <div>
+          <label>🔽 Sort by Date:</label>{" "}
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            style={dropdownStyle}
+          >
+            <option value="Descending">Newest First</option>
+            <option value="Ascending">Oldest First</option>
+          </select>
+        </div>
       </div>
 
-      {/* Summary */}
-      <h2>Summary for: {selectedMainCategory}, {selectedLocation}, {selectedMonth} {selectedYear}</h2>
-      {selectedMonth !== "All" && selectedYear !== "All" && (
-        <p style={{ color: "orange" }}>
-          📦 Carried Over from last month: {formatCurrency(carryOver)}
-        </p>
-      )}
-      <p style={{ color: "green" }}>🟢 Total Credited: {formatCurrency(totalCredit)}</p>
-      <p style={{ color: "red" }}>🔴 Total Debited: {formatCurrency(totalDebit)}</p>
-      <p style={{ color: finalBalance >= 0 ? "blue" : "darkred", fontWeight: "bold" }}>
-        💼 Final Balance (Carry Over + Current Net): {formatCurrency(finalBalance)}
-      </p>
-
-      {/* Category Totals */}
-      <h3>Category Totals</h3>
-      <ul>
-        {Object.entries(categoryTotals).map(([key, val]) => (
-          <li key={key}>{key.replace("-", " ➝ ")}: {formatCurrency(val)}</li>
-        ))}
-      </ul>
-
-      {/* Transactions Table */}
-      <h3>All Transactions</h3>
       {filtered.length === 0 ? (
         <p>No transactions found for this filter.</p>
       ) : (
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: "1rem",
-            backgroundColor: "#fff",
-          }}
-        >
+        <table style={tableStyle}>
           <thead>
             <tr style={{ backgroundColor: "#f2f2f2" }}>
               <th style={thStyle}>Date</th>
-              <th style={thStyle}>Main Category</th>
-              <th style={thStyle}>Location</th>
               <th style={thStyle}>Category</th>
               <th style={thStyle}>Type</th>
               <th style={thStyle}>Amount</th>
@@ -225,15 +228,17 @@ const TransactionsPage = ({ expenses }) => {
             {filtered.map((e, i) => (
               <tr key={i}>
                 <td style={tdStyle}>{new Date(e.date).toLocaleDateString()}</td>
-                <td style={tdStyle}>{e.mainCategory}</td>
-                <td style={tdStyle}>{e.location || "—"}</td>
                 <td style={tdStyle}>{e.category}</td>
                 <td style={tdStyle}>{e.type}</td>
                 <td style={tdStyle}>{formatCurrency(e.amount)}</td>
                 <td style={tdStyle}>
                   {e.receiptURL ? (
-                    <a href={e.receiptURL} target="_blank" rel="noopener noreferrer">View</a>
-                  ) : "No Receipt"}
+                    <a href={e.receiptURL} target="_blank" rel="noopener noreferrer">
+                      View
+                    </a>
+                  ) : (
+                    "No Receipt"
+                  )}
                 </td>
               </tr>
             ))}
@@ -244,7 +249,30 @@ const TransactionsPage = ({ expenses }) => {
   );
 };
 
-// Table Styles
+// 💅 Styles
+const dropdownStyle = {
+  padding: "6px 10px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+  fontSize: "14px",
+};
+
+const summaryBox = {
+  background: "#fff",
+  padding: "10px 16px",
+  borderRadius: "8px",
+  fontWeight: "600",
+  boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+  marginBottom: "10px",
+};
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  backgroundColor: "#fff",
+  marginTop: "1rem",
+};
+
 const thStyle = {
   border: "1px solid #ddd",
   padding: "8px",
