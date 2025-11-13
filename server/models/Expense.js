@@ -8,11 +8,11 @@ const expenseSchema = new mongoose.Schema(
     },
     location: {
       type: String,
-      required: true, // Chaibhumi / Wardha / Hyderabad / etc.
+      required: true, // Chaityabhoomi / Wardha / Hyderabad / etc.
     },
     person: {
       type: String,
-      required: true, // Siddhant / Mallesh / etc.
+      default: "Unknown", // optional until user login integrated
     },
     category: {
       type: String,
@@ -45,17 +45,17 @@ const expenseSchema = new mongoose.Schema(
       default: "",
     },
 
-    // 🧩 Multi-Tenancy Fields
+    // 🧩 Multi-Tenancy Fields (optional until login connected)
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
-      required: true,
-      index: true, // speeds up tenant-based queries
+      default: null,
+      index: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
       index: true,
     },
   },
