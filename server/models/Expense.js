@@ -10,10 +10,6 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       required: true, // Chaityabhoomi / Wardha / Hyderabad / etc.
     },
-    person: {
-      type: String,
-      default: "Unknown", // optional until user login integrated
-    },
     category: {
       type: String,
       required: true, // Grocery / Rent / Others / etc.
