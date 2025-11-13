@@ -1,51 +1,48 @@
 import React, { useState } from "react";
-import { Camera, Upload, X, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const getToday = () => {
   return new Date().toISOString().split("T")[0];
 };
 
-const TrackerPage = ({ expenses = [], setExpenses }) => {
+const TrackerPage = () => {
   const [expenseForms, setExpenseForms] = useState([
     {
       mainCategory: "",
-      location: "",
       category: "",
       customCategory: "",
+      note: "",
       type: "",
       amount: "",
-      receipt: null,
       date: getToday(),
-      receiptURL: "",
+      month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
     },
   ]);
 
-  const mainCategories = ["Event Based", "Office Based", "Engineering Based"];
+  const [loading, setLoading] = useState(false);
+  const [submittedExpenses, setSubmittedExpenses] = useState([]);
+  const navigate = useNavigate();
 
-  const locationGroups = {
-    "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
-    "Office Based": ["Wardha", "Hyderabad"],
-    "Engineering Based": ["Hyderabad", "Wardha"],
+  // Static categories data
+  const categories = {
+    mainCategories: ["Hyderabad Office", "Wardha Office", "Engineering Based", "Chaityabhoomi", "Deekshabhoomi"],
+    expenseCategories: [
+      "Grocery", 
+      "Household Work", 
+      "Computer Repair", 
+      "D-Mart", 
+      "Utilities", 
+      "Products and Services", 
+      "Salary", 
+      "Travel and Transport", 
+      "Internet Recharge", 
+      "Petrol", 
+      "Office Rent", 
+      "Electricity Bill", 
+      "Sundeep Sir Transfer",
+      "Others"
+    ]
   };
-
-  const commonCategories = [
-    "Grocery",
-    "Household Work",
-    "Computer Repair",
-    "D-Mart",
-    "Utilities",
-    "Products and Services",
-    "Salary",
-    "Travel and Transport",
-    "Internet Recharge",
-    "Petrol",
-    "Office Rent",
-    "Electricity Bill",
-    "Sundeep Sir Transfer",
-    "Direct Payment",
-    "UPI Payment",
-    "Others",
-  ];
 
   const autoCreditCategories = [
     "Sundeep Sir Transfer",
@@ -54,21 +51,13 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
   ];
 
   const handleChange = (index, e) => {
-    const { name, value, files } = e.target;
+    const { name, value } = e.target;
     const updated = [...expenseForms];
 
     if (name === "mainCategory") {
       updated[index] = {
         ...updated[index],
         mainCategory: value,
-        location: "",
-        category: "",
-        type: "",
-      };
-    } else if (name === "location") {
-      updated[index] = {
-        ...updated[index],
-        location: value,
         category: "",
         type: "",
       };
@@ -78,13 +67,6 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       updated[index].type = autoCreditCategories.includes(value)
         ? "Credit"
         : "Debit";
-    } else if (name === "customCategory") {
-      updated[index].customCategory = value;
-    } else if (name === "receipt") {
-      updated[index][name] = files.length > 0 ? files[0] : null;
-      if (files.length > 0) {
-        updated[index].receiptURL = URL.createObjectURL(files[0]);
-      }
     } else {
       updated[index][name] = value;
     }
@@ -97,353 +79,316 @@ const TrackerPage = ({ expenses = [], setExpenses }) => {
       ...expenseForms,
       {
         mainCategory: "",
-        location: "",
         category: "",
         customCategory: "",
+        note: "",
         type: "",
         amount: "",
-        receipt: null,
         date: getToday(),
-        receiptURL: "",
+        month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
       },
     ]);
   };
 
   const deleteExpenseRow = (index) => {
-    const updated = expenseForms.filter((_, i) => i !== index);
-    setExpenseForms(updated);
-  };
-
-  const removeReceipt = (index) => {
-    const updated = [...expenseForms];
-    updated[index].receipt = null;
-    updated[index].receiptURL = "";
-    setExpenseForms(updated);
+    if (expenseForms.length === 1) {
+      // If it's the last row, just reset it
+      setExpenseForms([
+        {
+          mainCategory: "",
+          category: "",
+          customCategory: "",
+          note: "",
+          type: "",
+          amount: "",
+          date: getToday(),
+          month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+        },
+      ]);
+    } else {
+      const updated = expenseForms.filter((_, i) => i !== index);
+      setExpenseForms(updated);
+    }
   };
 
   const submitAllExpenses = async () => {
-    const validExpenses = [];
-
-    for (let exp of expenseForms) {
-      const {
-        mainCategory,
-        location,
-        category,
-        customCategory,
-        type,
-        amount,
-        date,
-      } = exp;
-
-      if (
-        !mainCategory ||
-        !location ||
-        !category ||
-        !type ||
-        !amount ||
-        !date
-      ) {
-        alert("⚠️ Please fill all required fields before submitting.");
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert("Please login again");
+        navigate('/login');
         return;
       }
 
-      const parsedAmount = parseFloat(amount);
-      const monthStr = new Date(date).toLocaleString("default", {
-        month: "long",
-      });
+      const submittedData = [];
 
-      const expenseData = {
-        mainCategory,
-        location,
-        category: customCategory || category,
-        type,
-        amount: parsedAmount,
-        date,
-        month: monthStr,
-      };
+      for (let exp of expenseForms) {
+        const {
+          mainCategory,
+          category,
+          customCategory,
+          note,
+          type,
+          amount,
+          date,
+          month
+        } = exp;
 
-      try {
-        const res = await fetch("https://expenses-app-server-one.vercel.app/api/", {
+        // Validation
+        if (!mainCategory || !category || !type || !amount) {
+          alert("⚠️ Please fill all required fields before submitting.");
+          setLoading(false);
+          return;
+        }
+
+        const parsedAmount = parseFloat(amount);
+
+        const expenseData = {
+          mainCategory,
+          location: mainCategory, // Using mainCategory as location since we removed project/site
+          category: customCategory || category,
+          note,
+          type,
+          amount: parsedAmount,
+          date,
+          month
+        };
+
+        console.log("Submitting expense:", expenseData); // Debug log
+
+        // Save expense to backend
+        const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(expenseData),
         });
-        if (!res.ok) throw new Error("Failed to save expense");
-      } catch (err) {
-        console.error(err);
-        alert("❌ Error saving expense to server");
-        return;
+        
+        if (!res.ok) {
+          let errorMessage = "Failed to save expense";
+          try {
+            const errorData = await res.text();
+            console.error("Server response:", errorData);
+            errorMessage = errorData;
+          } catch (e) {
+            console.error("Could not parse error response");
+          }
+          throw new Error(errorMessage);
+        }
+
+        let savedExpense;
+        try {
+          savedExpense = await res.json();
+          submittedData.push(savedExpense);
+        } catch (e) {
+          console.error("Error parsing response JSON:", e);
+          // Even if we can't parse the response, consider it successful if status is ok
+          submittedData.push(expenseData);
+        }
       }
 
-      validExpenses.push(expenseData);
+      // Add to submitted expenses table
+      setSubmittedExpenses(prev => [...prev, ...submittedData]);
+
+      // Reset forms after successful submission
+      setExpenseForms([
+        {
+          mainCategory: "",
+          category: "",
+          customCategory: "",
+          note: "",
+          type: "",
+          amount: "",
+          date: getToday(),
+          month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+        },
+      ]);
+
+      alert("✅ Expenses submitted successfully!");
+      
+    } catch (err) {
+      console.error("Error submitting expenses:", err);
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-
-    const currentExpenses = Array.isArray(expenses) ? expenses : [];
-    setExpenses([...currentExpenses, ...validExpenses]);
-
-    setExpenseForms([
-      {
-        mainCategory: "",
-        location: "",
-        category: "",
-        customCategory: "",
-        type: "",
-        amount: "",
-        receipt: null,
-        date: getToday(),
-        receiptURL: "",
-      },
-    ]);
-
-    alert("✅ Expense added successfully!");
   };
 
   return (
-    <div className="container py-4">
-      <div className="row justify-content-center">
-        <div className="col-12 col-lg-10">
-          {expenseForms.map((form, idx) => (
-            <div className="card shadow-sm mb-4 border-0" key={idx}>
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h5 className="mb-0 text-primary">
-                    <span className="badge bg-primary me-2">{idx + 1}</span>
-                    Expense Entry
-                  </h5>
-                  {expenseForms.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => deleteExpenseRow(idx)}
-                      className="btn btn-outline-danger btn-sm"
-                    >
-                      <X size={16} className="me-1" />
-                      Remove
-                    </button>
-                  )}
+    <div className="tracker-container">
+      <div className="page-header">
+        <h1>💰 Expense Tracker</h1>
+        <p>Record your daily expenses here</p>
+      </div>
+
+      {/* Expense Form Section */}
+      <div className="form-section">
+        <h3>Add New Expense</h3>
+        {expenseForms.map((form, idx) => (
+          <div className="expense-card" key={idx}>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Expense Type *</label>
+                <select
+                  name="mainCategory"
+                  value={form.mainCategory}
+                  onChange={(e) => handleChange(idx, e)}
+                  required
+                >
+                  <option value="">Select Expense Type</option>
+                  {categories.mainCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {form.mainCategory && (
+                <div className="form-group">
+                  <label>Expense Category *</label>
+                  <select
+                    name="category"
+                    value={form.category}
+                    onChange={(e) => handleChange(idx, e)}
+                    required
+                  >
+                    <option value="">Select Expense Category</option>
+                    {categories.expenseCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              )}
+            </div>
 
-                <div className="row g-3">
-                  {/* Main Category */}
-                  <div className="col-md-6">
-                    <label className="form-label fw-semibold">
-                      <span className="text-danger me-1">*</span>
-                      Expense Type
-                    </label>
-                    <select
-                      name="mainCategory"
-                      value={form.mainCategory}
-                      onChange={(e) => handleChange(idx, e)}
-                      className="form-select"
-                    >
-                      <option value="">Select Type...</option>
-                      {mainCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Location */}
-                  {form.mainCategory && (
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">
-                        <span className="text-danger me-1">*</span>
-                        Project / Site
-                      </label>
-                      <select
-                        name="location"
-                        value={form.location}
-                        onChange={(e) => handleChange(idx, e)}
-                        className="form-select"
-                      >
-                        <option value="">Select Location...</option>
-                        {locationGroups[form.mainCategory].map((loc) => (
-                          <option key={loc} value={loc}>
-                            {loc}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Category */}
-                  {form.location && (
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">
-                        <span className="text-danger me-1">*</span>
-                        Expense Category
-                      </label>
-                      <select
-                        name="category"
-                        value={form.category}
-                        onChange={(e) => handleChange(idx, e)}
-                        className="form-select"
-                      >
-                        <option value="">Select Category...</option>
-                        {commonCategories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Custom Category */}
-                  {(form.category === "Others" ||
-                    form.category === "Products and Services") && (
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">
-                        Custom Details
-                      </label>
-                      <input
-                        type="text"
-                        name="customCategory"
-                        value={form.customCategory}
-                        onChange={(e) => handleChange(idx, e)}
-                        placeholder="Enter details..."
-                        className="form-control"
-                      />
-                    </div>
-                  )}
-
-                  {/* Type */}
-                  {form.category && (
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Type</label>
-                      <input
-                        className={`form-control fw-bold ${
-                          form.type === "Credit"
-                            ? "text-success bg-success bg-opacity-10"
-                            : "text-danger bg-danger bg-opacity-10"
-                        }`}
-                        type="text"
-                        value={form.type}
-                        readOnly
-                      />
-                    </div>
-                  )}
-
-                  {/* Amount */}
-                  <div className="col-md-6">
-                    <label className="form-label fw-semibold">
-                      <span className="text-danger me-1">*</span>
-                      Amount (₹)
-                    </label>
-                    <input
-                      name="amount"
-                      value={form.amount}
-                      onChange={(e) => handleChange(idx, e)}
-                      placeholder="0.00"
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                    />
-                  </div>
-
-                  {/* Receipt Upload */}
-                  <div className="col-12">
-                    <label className="form-label fw-semibold">
-                      Upload Receipt (Optional)
-                    </label>
-                    
-                    {!form.receipt ? (
-                      <div className="d-flex gap-2">
-                        <label className="btn btn-outline-primary flex-grow-1">
-                          <Camera size={18} className="me-2" />
-                          Take Photo
-                          <input
-                            type="file"
-                            name="receipt"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => handleChange(idx, e)}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                        <label className="btn btn-outline-secondary flex-grow-1">
-                          <Upload size={18} className="me-2" />
-                          Choose File
-                          <input
-                            type="file"
-                            name="receipt"
-                            accept="image/*,application/pdf"
-                            onChange={(e) => handleChange(idx, e)}
-                            style={{ display: "none" }}
-                          />
-                        </label>
-                      </div>
-                    ) : (
-                      <div className="card bg-light">
-                        <div className="card-body p-3">
-                          <div className="d-flex align-items-center gap-3">
-                            {form.receipt.type.startsWith("image/") ? (
-                              <img
-                                src={form.receiptURL}
-                                alt="Receipt"
-                                className="rounded"
-                                style={{
-                                  width: "80px",
-                                  height: "80px",
-                                  objectFit: "cover",
-                                  border: "2px solid #dee2e6",
-                                }}
-                              />
-                            ) : (
-                              <div
-                                className="d-flex align-items-center justify-content-center rounded bg-white"
-                                style={{
-                                  width: "80px",
-                                  height: "80px",
-                                  border: "2px solid #dee2e6",
-                                }}
-                              >
-                                <span className="fs-1">📄</span>
-                              </div>
-                            )}
-                            <div className="flex-grow-1">
-                              <p className="mb-1 fw-semibold text-truncate">
-                                {form.receipt.name}
-                              </p>
-                              <p className="mb-0 text-muted small">
-                                {(form.receipt.size / 1024).toFixed(2)} KB
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeReceipt(idx)}
-                              className="btn btn-danger btn-sm"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            <div className="form-row">
+              {(form.category === "Others" || form.category === "Products and Services") && (
+                <div className="form-group">
+                  <label>Custom Details</label>
+                  <input
+                    type="text"
+                    name="customCategory"
+                    value={form.customCategory}
+                    onChange={(e) => handleChange(idx, e)}
+                    placeholder="Enter custom details..."
+                  />
                 </div>
+              )}
+
+              {form.category && (
+                <div className="form-group">
+                  <label>Transaction Type</label>
+                  <input
+                    className={`type-field ${form.type.toLowerCase()}`}
+                    type="text"
+                    value={form.type}
+                    readOnly
+                  />
+                </div>
+              )}
+
+              {form.category && (
+                <div className="form-group">
+                  <label>Amount (₹) *</label>
+                  <input
+                    name="amount"
+                    value={form.amount}
+                    onChange={(e) => handleChange(idx, e)}
+                    placeholder="0.00"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label>Note (Optional)</label>
+                <textarea
+                  name="note"
+                  value={form.note}
+                  onChange={(e) => handleChange(idx, e)}
+                  placeholder="Add any additional notes..."
+                  rows="3"
+                />
               </div>
             </div>
-          ))}
 
-          {/* Action Buttons */}
-          <div className="d-flex gap-3 justify-content-center mb-4">
-            <button
-              onClick={addExpenseRow}
-              className="btn btn-outline-primary px-4"
-            >
-              ➕ Add Another Entry
-            </button>
-            <button
-              onClick={submitAllExpenses}
-              className="btn btn-success px-5 fw-semibold"
-            >
-              <CheckCircle size={18} className="me-2" />
-              Submit
-            </button>
+            {expenseForms.length > 1 && (
+              <button
+                type="button"
+                onClick={() => deleteExpenseRow(idx)}
+                className="delete-button"
+              >
+                🗑️ Delete This Row
+              </button>
+            )}
+          </div>
+        ))}
+
+        <div className="form-buttons">
+          <button onClick={addExpenseRow} disabled={loading}>
+            ➕ Add Another Expense
+          </button>
+          <button 
+            onClick={submitAllExpenses} 
+            disabled={loading}
+            className="submit-btn"
+          >
+            {loading ? "⏳ Submitting..." : "✅ Submit All Expenses"}
+          </button>
+        </div>
+      </div>
+
+      {/* Submitted Expenses Table */}
+      {submittedExpenses.length > 0 && (
+        <div className="table-section">
+          <h3>Recently Submitted Expenses</h3>
+          <div className="expenses-table-container">
+            <table className="expenses-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Expense Type</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {submittedExpenses.map((expense, index) => (
+                  <tr key={index}>
+                    <td>{new Date(expense.date).toLocaleDateString()}</td>
+                    <td>{expense.mainCategory}</td>
+                    <td>{expense.category}</td>
+                    <td>
+                      <span className={`type-badge ${expense.type.toLowerCase()}`}>
+                        {expense.type}
+                      </span>
+                    </td>
+                    <td>₹{expense.amount}</td>
+                    <td>{expense.note || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
+
+      <div className="form-info">
+        <p><strong>Note:</strong> Expenses are automatically associated with your account</p>
       </div>
     </div>
   );
