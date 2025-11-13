@@ -45,7 +45,8 @@ const AdminTransactionsPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchData = async () => {
     try {
