@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = 'https://expenses-app-server-one.vercel.app/api';
@@ -14,11 +14,7 @@ const AdminDashboard = () => {
 
   const orgCode = user?.organizationId?.code || 'N/A';
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [token]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -41,7 +37,11 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const copyCode = () => {
     navigator.clipboard.writeText(orgCode);
