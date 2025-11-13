@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from "react
 import TrackerPage from "./pages/TrackerPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminTransactionsPage from "./pages/AdminTransactions";
 import LoginPage from "./pages/login";
 import RegistrationPage from "./pages/Registration";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -79,7 +80,7 @@ const AppContent = () => {
               {user?.role === 'admin' ? (
                 <>
                   <NavLink to="/admin" end>👑 Admin Dashboard</NavLink>
-                  <NavLink to="/transactions">📜 All Transactions</NavLink>
+                  <NavLink to="/admin-transactions">📜 All Transactions</NavLink>
                 </>
               ) : (
                 <>
@@ -134,6 +135,14 @@ const AppContent = () => {
                 element={
                   <ProtectedRoute requiredRole="admin">
                     <AdminDashboard expenses={expenses} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-transactions"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminTransactionsPage />
                   </ProtectedRoute>
                 }
               />
