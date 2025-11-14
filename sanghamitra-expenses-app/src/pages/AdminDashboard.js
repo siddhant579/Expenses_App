@@ -80,6 +80,9 @@ const AdminDashboard = () => {
     }
   };
 
+  // Add the missing formatCurrency function
+  const formatCurrency = (num) => "₹" + (num || 0).toLocaleString("en-IN");
+
   if (loading) {
     return (
       <div className="container py-5 text-center">
@@ -119,18 +122,23 @@ const AdminDashboard = () => {
     employeeExpenseMap[userId].count += 1;
   });
 
-  // Group by category
-  const categoryTotals = {};
+  // Group by category - fix the categoryStats structure to match what's used in the table
+  const categoryStats = {};
   allExpenses.forEach(expense => {
     const category = expense.category || 'Uncategorized';
-    if (!categoryTotals[category]) {
-      categoryTotals[category] = {
-        total: 0,
+    if (!categoryStats[category]) {
+      categoryStats[category] = {
+        credit: 0,
+        debit: 0,
         count: 0
       };
     }
-    categoryTotals[category].total += expense.amount || 0;
-    categoryTotals[category].count += 1;
+    if (expense.type === 'Credit') {
+      categoryStats[category].credit += expense.amount || 0;
+    } else if (expense.type === 'Debit') {
+      categoryStats[category].debit += expense.amount || 0;
+    }
+    categoryStats[category].count += 1;
   });
 
   return (
