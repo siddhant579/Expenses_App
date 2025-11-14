@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { DollarSign } from 'lucide-react';
+import { Users, Eye, EyeOff } from 'lucide-react';
 
 const API_URL = 'https://expenses-app-server-one.vercel.app/api';
 
@@ -11,6 +11,7 @@ const LoginPage = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -80,17 +81,37 @@ const LoginPage = () => {
               />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-3">
               <label className="form-label fw-semibold">Password</label>
-              <input
-                type="password"
-                className="form-control"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required
-              />
+              <div className="input-group">                              
+                <input
+                  type={showPassword ? "text" : "password"}              
+                  className="form-control"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+                <button                                                  
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setShowPassword(!showPassword)}         
+                  tabIndex="-1"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <div className="text-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="btn btn-link text-decoration-none p-0 small"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
+            
 
             <button
               type="submit"
@@ -124,3 +145,4 @@ const LoginPage = () => {
 
 
 export default LoginPage;
+
