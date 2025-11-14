@@ -139,20 +139,21 @@ const AdminDashboard = () => {
     employeeExpenseMap[userId].count += 1;
   });
 
-  // Group by category - only track debited amounts
+  // Group by category - only track debited amounts and only for categories with debit transactions
   const categoryStats = {};
   filteredExpenses.forEach(expense => {
-    const category = expense.category || 'Uncategorized';
-    if (!categoryStats[category]) {
-      categoryStats[category] = {
-        debited: 0,
-        count: 0
-      };
-    }
+    // Only process debit transactions
     if (expense.type === 'Debit') {
+      const category = expense.category || 'Uncategorized';
+      if (!categoryStats[category]) {
+        categoryStats[category] = {
+          debited: 0,
+          count: 0
+        };
+      }
       categoryStats[category].debited += expense.amount || 0;
+      categoryStats[category].count += 1;
     }
-    categoryStats[category].count += 1;
   });
 
   return (
@@ -351,8 +352,8 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Category Breakdown - Only Debited */}
-      {Object.keys(categoryStats).length > 0 && (
+      {/* Category Breakdown - Only show categories with debit transactions */}
+      {Object.keys(categoryStats).length > 0 ? (
         <div className="card mb-4 border-0 shadow-sm">
           <div className="card-header bg-white border-0 pt-4">
             <h5 className="mb-0">Category Breakdown {selectedMonth !== "All" && `- ${selectedMonth}`}</h5>
@@ -383,6 +384,17 @@ const AdminDashboard = () => {
                     ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card mb-4 border-0 shadow-sm">
+          <div className="card-header bg-white border-0 pt-4">
+            <h5 className="mb-0">Category Breakdown {selectedMonth !== "All" && `- ${selectedMonth}`}</h5>
+          </div>
+          <div className="card-body">
+            <div className="text-center py-4 text-muted">
+              <p className="mb-0">No debit transactions found for the selected period.</p>
             </div>
           </div>
         </div>
