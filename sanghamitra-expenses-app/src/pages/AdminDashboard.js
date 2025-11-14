@@ -139,21 +139,18 @@ const AdminDashboard = () => {
     employeeExpenseMap[userId].count += 1;
   });
 
-  // Group by category - fix the categoryStats structure to match what's used in the table
+  // Group by category - only track debited amounts
   const categoryStats = {};
   filteredExpenses.forEach(expense => {
     const category = expense.category || 'Uncategorized';
     if (!categoryStats[category]) {
       categoryStats[category] = {
-        credit: 0,
-        debit: 0,
+        debited: 0,
         count: 0
       };
     }
-    if (expense.type === 'Credit') {
-      categoryStats[category].credit += expense.amount || 0;
-    } else if (expense.type === 'Debit') {
-      categoryStats[category].debit += expense.amount || 0;
+    if (expense.type === 'Debit') {
+      categoryStats[category].debited += expense.amount || 0;
     }
     categoryStats[category].count += 1;
   });
@@ -354,7 +351,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Category Breakdown */}
+      {/* Category Breakdown - Only Debited */}
       {Object.keys(categoryStats).length > 0 && (
         <div className="card mb-4 border-0 shadow-sm">
           <div className="card-header bg-white border-0 pt-4">
@@ -366,21 +363,19 @@ const AdminDashboard = () => {
                 <thead>
                   <tr>
                     <th>Category</th>
-                    <th className="text-end">Credit</th>
-                    <th className="text-end">Debit</th>
-                    <th className="text-end">Net</th>
-                    <th className="text-center">Count</th>
+                    <th className="text-end">Debited Amount</th>
+                    <th className="text-center">Transactions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(categoryStats)
-                    .sort((a, b) => (b[1].credit + b[1].debit) - (a[1].credit + a[1].debit))
+                    .sort((a, b) => b[1].debited - a[1].debited)
                     .map(([cat, stats]) => (
                       <tr key={cat}>
                         <td>{cat}</td>
-                        <td className="text-end text-success">{formatCurrency(stats.credit)}</td>
-                        <td className="text-end text-danger">{formatCurrency(stats.debit)}</td>
-                        <td className="text-end fw-bold">{formatCurrency(stats.credit - stats.debit)}</td>
+                        <td className="text-end fw-bold text-danger">
+                          {formatCurrency(stats.debited)}
+                        </td>
                         <td className="text-center">
                           <span className="badge bg-secondary">{stats.count}</span>
                         </td>
