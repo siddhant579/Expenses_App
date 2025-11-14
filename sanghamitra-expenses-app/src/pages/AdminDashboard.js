@@ -94,6 +94,9 @@ const AdminDashboard = () => {
   const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   const employeeCount = employees.length;
   const transactionCount = allExpenses.length;
+  const totalDebited = allExpenses
+    .filter(e => e.type === 'Debit')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
 
   // Group expenses by employee for display
   const employeeExpenseMap = {};
@@ -171,14 +174,42 @@ const AdminDashboard = () => {
       {/* Statistics Cards */}
       <div className="row g-3 mb-4">
         <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-primary text-white">
+            <div className="card-body">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Number of Employees</p>
+                  <h3 className="mb-0 fw-bold">{employeeCount}</h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <Users size={28} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-info text-white">
+            <div className="card-body">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Number of Transactions</p>
+                  <h3 className="mb-0 fw-bold">{transactionCount}</h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <TrendingUp size={28} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-3 col-md-6">
           <div className="card border-0 shadow-sm h-100 bg-success text-white">
             <div className="card-body">
               <div className="d-flex align-items-center justify-content-between">
                 <div>
-                  <p className="mb-1 opacity-75 small">Total Credit</p>
-                  <h3 className="mb-0 fw-bold">
-                    ₹{allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
-                  </h3>
+                  <p className="mb-1 opacity-75 small">Total Transaction Amount</p>
+                  <h3 className="mb-0 fw-bold">₹{totalExpenses.toFixed(2)}</h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
                   <DollarSign size={28} />
@@ -192,43 +223,11 @@ const AdminDashboard = () => {
             <div className="card-body">
               <div className="d-flex align-items-center justify-content-between">
                 <div>
-                  <p className="mb-1 opacity-75 small">Total Debit</p>
-                  <h3 className="mb-0 fw-bold">
-                    ₹{allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
-                  </h3>
-                </div>
-                <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <TrendingUp size={28} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-3 col-md-6">
-          <div className="card border-0 shadow-sm h-100 bg-primary text-white">
-            <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="mb-1 opacity-75 small">Net Balance</p>
-                  <h3 className="mb-0 fw-bold">₹{(totalExpenses - allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0) + allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0)).toFixed(2)}</h3>
+                  <p className="mb-1 opacity-75 small">Total Debited Amount</p>
+                  <h3 className="mb-0 fw-bold">₹{totalDebited.toFixed(2)}</h3>
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
                   <DollarSign size={28} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-lg-3 col-md-6">
-          <div className="card border-0 shadow-sm h-100 bg-info text-white">
-            <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="mb-1 opacity-75 small">Transactions</p>
-                  <h3 className="mb-0 fw-bold">{transactionCount}</h3>
-                </div>
-                <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <Users size={28} />
                 </div>
               </div>
             </div>
@@ -366,79 +365,6 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
-      {/* All Transactions */}
-      <div className="card border-0 shadow-sm">
-        <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0">All Transactions</h5>
-        </div>
-        <div className="card-body p-0">
-          {allExpenses.length === 0 ? (
-            <div className="text-center py-5 text-muted">
-              <Calendar size={48} className="mb-3 opacity-50" />
-              <p className="mb-0">No transactions yet</p>
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <table className="table table-hover mb-0">
-                <thead className="bg-light">
-                  <tr>
-                    <th className="border-0">Employee</th>
-                    <th className="border-0">Person</th>
-                    <th className="border-0">Category</th>
-                    <th className="border-0">Location</th>
-                    <th className="border-0">Type</th>
-                    <th className="border-0 text-end">Amount</th>
-                    <th className="border-0">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allExpenses.slice(0, 20).map((expense, idx) => (
-                    <tr key={expense._id || idx}>
-                      <td className="align-middle">
-                        <small className="text-muted">
-                          {expense.userId?.name || 'Unknown'}
-                        </small>
-                      </td>
-                      <td className="align-middle">{expense.person || '-'}</td>
-                      <td className="align-middle">
-                        <span className="badge bg-primary bg-opacity-10 text-primary">
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="align-middle">
-                        <small className="text-muted">{expense.location || '-'}</small>
-                      </td>
-                      <td className="align-middle">
-                        <span className={`badge ${expense.type === 'Credit' ? 'bg-success' : 'bg-danger'}`}>
-                          {expense.type}
-                        </span>
-                      </td>
-                      <td className="align-middle text-end fw-bold text-success">
-                        ₹{expense.amount?.toFixed(2)}
-                      </td>
-                      <td className="align-middle text-muted">
-                        <small>
-                          {new Date(expense.date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </small>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        {allExpenses.length > 20 && (
-          <div className="card-footer bg-white border-0 text-center">
-            <small className="text-muted">Showing 20 of {allExpenses.length} transactions</small>
-          </div>
-        )}
-      </div>
 
       {/* Employee Details Modal */}
       <div className="modal fade" id="employeeModal" tabIndex="-1">
