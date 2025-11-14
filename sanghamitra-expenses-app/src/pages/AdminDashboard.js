@@ -295,29 +295,39 @@ const AdminDashboard = () => {
       </div>
 
       {/* Category Breakdown */}
-      {Object.keys(categoryTotals).length > 0 && (
+      {Object.keys(categoryStats).length > 0 && (
         <div className="card mb-4 border-0 shadow-sm">
           <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">Expense by Category</h5>
+            <h5 className="mb-0">Category Breakdown</h5>
           </div>
           <div className="card-body">
-            <div className="row g-3">
-              {Object.entries(categoryTotals)
-                .sort((a, b) => b[1].total - a[1].total)
-                .map(([category, data]) => (
-                  <div key={category} className="col-md-6 col-lg-3">
-                    <div className="border rounded p-3">
-                      <div className="d-flex align-items-center mb-2">
-                        <Tag size={18} className="text-primary me-2" />
-                        <h6 className="mb-0">{category}</h6>
-                      </div>
-                      <h4 className="mb-0 text-success">₹{data.total.toFixed(2)}</h4>
-                      <small className="text-muted">
-                        {data.count} transactions • {((data.total / totalExpenses) * 100).toFixed(1)}%
-                      </small>
-                    </div>
-                  </div>
-                ))}
+            <div className="table-responsive">
+              <table className="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th className="text-end">Credit</th>
+                    <th className="text-end">Debit</th>
+                    <th className="text-end">Net</th>
+                    <th className="text-center">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(categoryStats)
+                    .sort((a, b) => (b[1].credit + b[1].debit) - (a[1].credit + a[1].debit))
+                    .map(([cat, stats]) => (
+                      <tr key={cat}>
+                        <td>{cat}</td>
+                        <td className="text-end text-success">{formatCurrency(stats.credit)}</td>
+                        <td className="text-end text-danger">{formatCurrency(stats.debit)}</td>
+                        <td className="text-end fw-bold">{formatCurrency(stats.credit - stats.debit)}</td>
+                        <td className="text-center">
+                          <span className="badge bg-secondary">{stats.count}</span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
