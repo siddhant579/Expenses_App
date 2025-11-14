@@ -1,193 +1,83 @@
-
-import React, { useState, useEffect, useCallback } from "react";
+// src/pages/AdminDashboard.js
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Copy, CheckCircle, Users, DollarSign, TrendingUp, Calendar, Tag, User, Eye } from 'lucide-react';
 
 const API_URL = 'https://expenses-app-server-one.vercel.app/api';
 
-const AdminTransactionsPage = () => {
-  const { token } = useAuth();
-  const [expenses, setExpenses] = useState([]);
+const AdminDashboard = () => {
+  const { user, token } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [stats, setStats] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [allExpenses, setAllExpenses] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Filter states
-  const [selectedEmployee, setSelectedEmployee] = useState("All");
-  const [selectedMonth, setSelectedMonth] = useState("All");
-  const [selectedYear, setSelectedYear] = useState("All");
-  const [selectedMainCategory, setSelectedMainCategory] = useState("All");
-  const [selectedLocation, setSelectedLocation] = useState("All");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedType, setSelectedType] = useState("All");
-  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const orgCode = user?.organizationId?.code || 'N/A';
 
-  const monthsList = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, [token]);
 
-  const yearOptions = [
-    "2020", "2021", "2022", "2023", "2024", "2025",
-    "2026", "2027", "2028", "2029", "2030"
-  ];
-
-  const mainCategories = [
-    "Event Based",
-    "Office Based",
-    "Engineering Based"
-  ];
-
-  const locationGroups = {
-    "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
-    "Office Based": ["Wardha", "Hyderabad"],
-    "Engineering Based": ["Hyderabad", "Wardha"],
-  };
-
-  const fetchData = useCallback(async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Fetch all expenses
+      // Fetch all expenses for the organization
       const expensesResponse = await fetch(`${API_URL}/expenses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const expensesData = await expensesResponse.json();
-      setExpenses(expensesData);
+      setAllExpenses(expensesData);
 
-      // Fetch employees
+      // Fetch statistics
+      const statsResponse = await fetch(`${API_URL}/expenses/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const statsData = await statsResponse.json();
+      setStats(statsData);
+
+      // Fetch employees list
       const employeesResponse = await fetch(`${API_URL}/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const employeesData = await employeesResponse.json();
       setEmployees(employeesData);
 
+      console.log('Dashboard Data:', { stats: statsData, employees: employeesData, expenses: expensesData });
+
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching dashboard data:', err);
     } finally {
       setLoading(false);
     }
-  }, [token]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Get unique categories from expenses
-  const categories = [...new Set(expenses.map(e => e.category).filter(Boolean))];
-
-  // Filter logic
-  const filtered = expenses.filter((e) => {
-    const expenseDate = new Date(e.date);
-
-    // Employee filter
-    const employeeMatch =
-      selectedEmployee === "All" || 
-      (e.userId?._id === selectedEmployee || e.userId === selectedEmployee);
-
-    // Month filter
-    const monthMatch =
-      selectedMonth === "All" ||
-      expenseDate.toLocaleString("default", { month: "long" }) === selectedMonth;
-
-    // Year filter
-    const yearMatch =
-      selectedYear === "All" ||
-      expenseDate.getFullYear().toString() === selectedYear;
-
-    // Main category filter
-    const mainMatch =
-      selectedMainCategory === "All" || e.mainCategory === selectedMainCategory;
-
-    // Location filter
-    const locMatch =
-      selectedLocation === "All" || e.location === selectedLocation;
-
-    // Category filter
-    const catMatch =
-      selectedCategory === "All" || e.category === selectedCategory;
-
-    // Type filter
-    const typeMatch =
-      selectedType === "All" || e.type === selectedType;
-
-    // Date range filter
-    const dateRangeMatch = (!dateRange.start || expenseDate >= new Date(dateRange.start)) &&
-                           (!dateRange.end || expenseDate <= new Date(dateRange.end));
-
-    return employeeMatch && monthMatch && yearMatch && mainMatch && 
-           locMatch && catMatch && typeMatch && dateRangeMatch;
-  });
-
-  // Calculate totals
-  const totalCredit = filtered
-    .filter((e) => e.type === "Credit")
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const totalDebit = filtered
-    .filter((e) => e.type === "Debit")
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const netBalance = totalCredit - totalDebit;
-
-  // Group by employee
-  const employeeStats = {};
-  filtered.forEach(exp => {
-    const userId = exp.userId?._id || exp.userId;
-    const userName = exp.userId?.name || 'Unknown';
-    if (!employeeStats[userId]) {
-      employeeStats[userId] = { name: userName, credit: 0, debit: 0, count: 0 };
-    }
-    if (exp.type === 'Credit') employeeStats[userId].credit += exp.amount;
-    if (exp.type === 'Debit') employeeStats[userId].debit += exp.amount;
-    employeeStats[userId].count += 1;
-  });
-
-  // Group by category
-  const categoryStats = {};
-  filtered.forEach(exp => {
-    if (!categoryStats[exp.category]) {
-      categoryStats[exp.category] = { credit: 0, debit: 0, count: 0 };
-    }
-    if (exp.type === 'Credit') categoryStats[exp.category].credit += exp.amount;
-    if (exp.type === 'Debit') categoryStats[exp.category].debit += exp.amount;
-    categoryStats[exp.category].count += 1;
-  });
-
-  const formatCurrency = (num) => "₹" + (num || 0).toLocaleString("en-IN");
-
-  const clearFilters = () => {
-    setSelectedEmployee("All");
-    setSelectedMonth("All");
-    setSelectedYear("All");
-    setSelectedMainCategory("All");
-    setSelectedLocation("All");
-    setSelectedCategory("All");
-    setSelectedType("All");
-    setDateRange({ start: "", end: "" });
   };
 
-  const exportToCSV = () => {
-    const headers = ["Date", "Employee", "Main Category", "Location", "Category", "Type", "Amount", "Note"];
-    const rows = filtered.map(e => [
-      new Date(e.date).toLocaleDateString('en-IN'),
-      e.userId?.name || 'Unknown',
-      e.mainCategory,
-      e.location || '',
-      e.category,
-      e.type,
-      e.amount,
-      e.note || ''
-    ]);
-    
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
+  const copyCode = () => {
+    navigator.clipboard.writeText(orgCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyRegistrationLink = () => {
+    const registrationLink = `http://localhost:3000/register?code=${orgCode}`;
+    navigator.clipboard.writeText(registrationLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const viewEmployeeDetails = async (employeeId) => {
+    try {
+      const response = await fetch(`${API_URL}/employees/${employeeId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setSelectedEmployee(data);
+    } catch (err) {
+      console.error('Error fetching employee details:', err);
+    }
   };
 
   if (loading) {
@@ -200,334 +90,341 @@ const AdminTransactionsPage = () => {
     );
   }
 
+  // Calculate totals
+  const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const employeeCount = employees.length;
+  const transactionCount = allExpenses.length;
+
+  // Group expenses by employee for display
+  const employeeExpenseMap = {};
+  allExpenses.forEach(expense => {
+    const userId = expense.userId?._id || expense.userId;
+    if (!employeeExpenseMap[userId]) {
+      employeeExpenseMap[userId] = {
+        expenses: [],
+        total: 0,
+        count: 0
+      };
+    }
+    employeeExpenseMap[userId].expenses.push(expense);
+    employeeExpenseMap[userId].total += expense.amount || 0;
+    employeeExpenseMap[userId].count += 1;
+  });
+
+  // Group by category
+  const categoryTotals = {};
+  allExpenses.forEach(expense => {
+    const category = expense.category || 'Uncategorized';
+    if (!categoryTotals[category]) {
+      categoryTotals[category] = {
+        total: 0,
+        count: 0
+      };
+    }
+    categoryTotals[category].total += expense.amount || 0;
+    categoryTotals[category].count += 1;
+  });
+
   return (
-    <div className="container-fluid py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">📊 All Transactions</h2>
-        <button onClick={exportToCSV} className="btn btn-success btn-sm">
-          📥 Export CSV
-        </button>
-      </div>
-
-      {/* Filters Section */}
+    <div className="container py-4">
+      {/* Welcome & Organization Code Card */}
       <div className="card mb-4 border-0 shadow-sm">
-        <div className="card-header bg-white border-0 pt-4">
-          <div className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">
-              🔍 Filters
-            </h5>
-            <button onClick={clearFilters} className="btn btn-sm btn-outline-secondary">
-              ❌ Clear All
-            </button>
-          </div>
-        </div>
         <div className="card-body">
-          <div className="row g-3">
-            {/* Employee Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">👤 Employee</label>
-              <select
-                className="form-select"
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-              >
-                <option value="All">All Employees</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp._id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
+          <div className="row align-items-center">
+            <div className="col-md-8">
+              <h4 className="mb-2">Welcome, {user?.name}! 👑</h4>
+              <p className="text-muted mb-0">
+                Organization: <strong>{user?.organizationId?.name}</strong>
+              </p>
             </div>
-
-            {/* Main Category Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">🏢 Main Category</label>
-              <select
-                className="form-select"
-                value={selectedMainCategory}
-                onChange={(e) => {
-                  setSelectedMainCategory(e.target.value);
-                  setSelectedLocation("All");
-                }}
-              >
-                <option value="All">All Categories</option>
-                {mainCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Location Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">📍 Location</label>
-              <select
-                className="form-select"
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                disabled={selectedMainCategory === "All"}
-              >
-                <option value="All">All Locations</option>
-                {selectedMainCategory !== "All" &&
-                  locationGroups[selectedMainCategory]?.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Category Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">🏷️ Category</label>
-              <select
-                className="form-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <option value="All">All Categories</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Month Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">📅 Month</label>
-              <select
-                className="form-select"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-              >
-                <option value="All">All Months</option>
-                {monthsList.map((month) => (
-                  <option key={month} value={month}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Year Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">🗓️ Year</label>
-              <select
-                className="form-select"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-              >
-                <option value="All">All Years</option>
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Type Filter */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">💳 Type</label>
-              <select
-                className="form-select"
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-              >
-                <option value="All">All Types</option>
-                <option value="Credit">Credit</option>
-                <option value="Debit">Debit</option>
-              </select>
-            </div>
-
-            {/* Date Range */}
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">📆 Date Range</label>
-              <div className="d-flex gap-2">
-                <input
-                  type="date"
-                  className="form-control form-control-sm"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                />
-                <input
-                  type="date"
-                  className="form-control form-control-sm"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                />
+            <div className="col-md-4 mt-3 mt-md-0">
+              <div className="alert alert-primary mb-0">
+                <p className="small mb-2 fw-semibold">Share this code with employees:</p>
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <code className="flex-grow-1 bg-white px-3 py-2 rounded border border-primary">
+                    {orgCode}
+                  </code>
+                  <button onClick={copyCode} className="btn btn-primary btn-sm" title="Copy code">
+                    {copied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                  </button>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm bg-white" 
+                    value={`http://localhost:3000/register?code=${orgCode}`}
+                    readOnly
+                  />
+                  <button onClick={copyRegistrationLink} className="btn btn-success btn-sm text-nowrap">
+                    {linkCopied ? <CheckCircle size={18} /> : <Copy size={18} />}
+                    <span className="ms-1 d-none d-sm-inline">
+                      {linkCopied ? 'Copied!' : 'Link'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Statistics Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-success text-white">
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-success text-white">
             <div className="card-body">
-              <h6 className="opacity-75 mb-2">Total Credit</h6>
-              <h3 className="mb-0">{formatCurrency(totalCredit)}</h3>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Total Credit</p>
+                  <h3 className="mb-0 fw-bold">
+                    ₹{allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
+                  </h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <DollarSign size={28} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-danger text-white">
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-danger text-white">
             <div className="card-body">
-              <h6 className="opacity-75 mb-2">Total Debit</h6>
-              <h3 className="mb-0">{formatCurrency(totalDebit)}</h3>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Total Debit</p>
+                  <h3 className="mb-0 fw-bold">
+                    ₹{allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0).toFixed(2)}
+                  </h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <TrendingUp size={28} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className={`card border-0 shadow-sm text-white ${netBalance >= 0 ? 'bg-primary' : 'bg-warning'}`}>
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-primary text-white">
             <div className="card-body">
-              <h6 className="opacity-75 mb-2">Net Balance</h6>
-              <h3 className="mb-0">{formatCurrency(netBalance)}</h3>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Net Balance</p>
+                  <h3 className="mb-0 fw-bold">₹{(totalExpenses - allExpenses.filter(e => e.type === 'Debit').reduce((sum, e) => sum + (e.amount || 0), 0) + allExpenses.filter(e => e.type === 'Credit').reduce((sum, e) => sum + (e.amount || 0), 0)).toFixed(2)}</h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <DollarSign size={28} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-info text-white">
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-info text-white">
             <div className="card-body">
-              <h6 className="opacity-75 mb-2">Transactions</h6>
-              <h3 className="mb-0">{filtered.length}</h3>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Transactions</p>
+                  <h3 className="mb-0 fw-bold">{transactionCount}</h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <Users size={28} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Employee Breakdown */}
-      {Object.keys(employeeStats).length > 0 && (
-        <div className="card mb-4 border-0 shadow-sm">
-          <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">👥 Employee Breakdown</h5>
-          </div>
-          <div className="card-body">
-            <div className="row g-3">
-              {Object.entries(employeeStats).map(([userId, stats]) => (
-                <div key={userId} className="col-md-4">
-                  <div className="border rounded p-3">
-                    <h6 className="mb-2">{stats.name}</h6>
-                    <div className="d-flex justify-content-between mb-1">
-                      <small className="text-success">Credit:</small>
-                      <strong className="text-success">{formatCurrency(stats.credit)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between mb-1">
-                      <small className="text-danger">Debit:</small>
-                      <strong className="text-danger">{formatCurrency(stats.debit)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between">
-                      <small>Transactions:</small>
-                      <span className="badge bg-info">{stats.count}</span>
-                    </div>
-                  </div>
+      {/* Quick Stats Row */}
+      <div className="row g-3 mb-4">
+        <div className="col-md-6">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                  <Users className="text-primary" size={28} />
                 </div>
-              ))}
+                <div>
+                  <h6 className="text-muted mb-1 small">Active Employees</h6>
+                  <h3 className="mb-0 fw-bold">{employeeCount}</h3>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Category Breakdown */}
-      {Object.keys(categoryStats).length > 0 && (
-        <div className="card mb-4 border-0 shadow-sm">
-          <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">🏷️ Category Breakdown</h5>
-          </div>
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th className="text-end">Credit</th>
-                    <th className="text-end">Debit</th>
-                    <th className="text-end">Net</th>
-                    <th className="text-center">Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(categoryStats)
-                    .sort((a, b) => (b[1].credit + b[1].debit) - (a[1].credit + a[1].debit))
-                    .map(([cat, stats]) => (
-                      <tr key={cat}>
-                        <td>{cat}</td>
-                        <td className="text-end text-success">{formatCurrency(stats.credit)}</td>
-                        <td className="text-end text-danger">{formatCurrency(stats.debit)}</td>
-                        <td className="text-end fw-bold">{formatCurrency(stats.credit - stats.debit)}</td>
-                        <td className="text-center">
-                          <span className="badge bg-secondary">{stats.count}</span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+        <div className="col-md-6">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body">
+              <div className="d-flex align-items-center">
+                <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                  <TrendingUp className="text-success" size={28} />
+                </div>
+                <div>
+                  <h6 className="text-muted mb-1 small">Avg Transaction</h6>
+                  <h3 className="mb-0 fw-bold">
+                    ₹{transactionCount > 0 ? (totalExpenses / transactionCount).toFixed(2) : 0}
+                  </h3>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Transactions Table */}
-      <div className="card border-0 shadow-sm">
+      {/* Employees Overview */}
+      <div className="card mb-4 border-0 shadow-sm">
         <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0">📜 Transactions List ({filtered.length})</h5>
+          <h5 className="mb-0 d-flex align-items-center">
+            <Users className="me-2" size={20} />
+            Employees Overview
+          </h5>
         </div>
         <div className="card-body p-0">
-          {filtered.length === 0 ? (
+          {employees.length === 0 ? (
             <div className="text-center py-5 text-muted">
-              <p className="mb-0">No transactions found matching the selected filters.</p>
+              <Users size={48} className="mb-3 opacity-50" />
+              <p className="mb-0">No employees yet. Share your organization code!</p>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover mb-0">
                 <thead className="bg-light">
                   <tr>
-                    <th className="border-0">Date</th>
                     <th className="border-0">Employee</th>
-                    <th className="border-0">Main Category</th>
-                    <th className="border-0">Location</th>
-                    <th className="border-0">Category</th>
-                    <th className="border-0">Type</th>
-                    <th className="border-0 text-end">Amount</th>
-                    <th className="border-0">Note</th>
+                    <th className="border-0">Email</th>
+                    <th className="border-0 text-end">Total Expenses</th>
+                    <th className="border-0 text-end">Transactions</th>
+                    <th className="border-0 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((e, i) => (
-                    <tr key={e._id || i}>
+                  {employees.map((emp) => {
+                    const empStats = employeeExpenseMap[emp._id] || { total: 0, count: 0 };
+                    return (
+                      <tr key={emp._id}>
+                        <td className="align-middle">
+                          <div className="d-flex align-items-center">
+                            <div className="rounded-circle bg-primary bg-opacity-10 p-2 me-2">
+                              <User size={16} className="text-primary" />
+                            </div>
+                            <strong>{emp.name}</strong>
+                          </div>
+                        </td>
+                        <td className="align-middle text-muted">{emp.email}</td>
+                        <td className="align-middle text-end fw-bold text-success">
+                          ₹{empStats.total.toFixed(2)}
+                        </td>
+                        <td className="align-middle text-end">
+                          <span className="badge bg-info">{empStats.count}</span>
+                        </td>
+                        <td className="align-middle text-center">
+                          <button
+                            onClick={() => viewEmployeeDetails(emp._id)}
+                            className="btn btn-sm btn-outline-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#employeeModal"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Category Breakdown */}
+      {Object.keys(categoryTotals).length > 0 && (
+        <div className="card mb-4 border-0 shadow-sm">
+          <div className="card-header bg-white border-0 pt-4">
+            <h5 className="mb-0">Expense by Category</h5>
+          </div>
+          <div className="card-body">
+            <div className="row g-3">
+              {Object.entries(categoryTotals)
+                .sort((a, b) => b[1].total - a[1].total)
+                .map(([category, data]) => (
+                  <div key={category} className="col-md-6 col-lg-3">
+                    <div className="border rounded p-3">
+                      <div className="d-flex align-items-center mb-2">
+                        <Tag size={18} className="text-primary me-2" />
+                        <h6 className="mb-0">{category}</h6>
+                      </div>
+                      <h4 className="mb-0 text-success">₹{data.total.toFixed(2)}</h4>
+                      <small className="text-muted">
+                        {data.count} transactions • {((data.total / totalExpenses) * 100).toFixed(1)}%
+                      </small>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Transactions */}
+      <div className="card border-0 shadow-sm">
+        <div className="card-header bg-white border-0 pt-4">
+          <h5 className="mb-0">All Transactions</h5>
+        </div>
+        <div className="card-body p-0">
+          {allExpenses.length === 0 ? (
+            <div className="text-center py-5 text-muted">
+              <Calendar size={48} className="mb-3 opacity-50" />
+              <p className="mb-0">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="bg-light">
+                  <tr>
+                    <th className="border-0">Employee</th>
+                    <th className="border-0">Person</th>
+                    <th className="border-0">Category</th>
+                    <th className="border-0">Location</th>
+                    <th className="border-0">Type</th>
+                    <th className="border-0 text-end">Amount</th>
+                    <th className="border-0">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allExpenses.slice(0, 20).map((expense, idx) => (
+                    <tr key={expense._id || idx}>
                       <td className="align-middle">
-                        <small>{new Date(e.date).toLocaleDateString('en-IN')}</small>
+                        <small className="text-muted">
+                          {expense.userId?.name || 'Unknown'}
+                        </small>
                       </td>
-                      <td className="align-middle">
-                        <small className="text-muted">{e.userId?.name || 'Unknown'}</small>
-                      </td>
-                      <td className="align-middle">
-                        <small className="text-muted">{e.mainCategory}</small>
-                      </td>
-                      <td className="align-middle">
-                        <small className="text-muted">{e.location || '—'}</small>
-                      </td>
+                      <td className="align-middle">{expense.person || '-'}</td>
                       <td className="align-middle">
                         <span className="badge bg-primary bg-opacity-10 text-primary">
-                          {e.category}
+                          {expense.category}
                         </span>
                       </td>
                       <td className="align-middle">
-                        <span className={`badge ${e.type === 'Credit' ? 'bg-success' : 'bg-danger'}`}>
-                          {e.type}
-                        </span>
-                      </td>
-                      <td className="align-middle text-end fw-bold">
-                        {formatCurrency(e.amount)}
+                        <small className="text-muted">{expense.location || '-'}</small>
                       </td>
                       <td className="align-middle">
-                        <small className="text-muted">{e.note || '—'}</small>
+                        <span className={`badge ${expense.type === 'Credit' ? 'bg-success' : 'bg-danger'}`}>
+                          {expense.type}
+                        </span>
+                      </td>
+                      <td className="align-middle text-end fw-bold text-success">
+                        ₹{expense.amount?.toFixed(2)}
+                      </td>
+                      <td className="align-middle text-muted">
+                        <small>
+                          {new Date(expense.date).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </small>
                       </td>
                     </tr>
                   ))}
@@ -536,9 +433,97 @@ const AdminTransactionsPage = () => {
             </div>
           )}
         </div>
+        {allExpenses.length > 20 && (
+          <div className="card-footer bg-white border-0 text-center">
+            <small className="text-muted">Showing 20 of {allExpenses.length} transactions</small>
+          </div>
+        )}
+      </div>
+
+      {/* Employee Details Modal */}
+      <div className="modal fade" id="employeeModal" tabIndex="-1">
+        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Employee Details</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div className="modal-body">
+              {selectedEmployee ? (
+                <>
+                  <div className="mb-4 p-3 bg-light rounded">
+                    <h6 className="text-muted mb-3">Employee Information</h6>
+                    <div className="row">
+                      <div className="col-md-6">
+                        <p className="mb-2"><strong>Name:</strong> {selectedEmployee.employee.name}</p>
+                        <p className="mb-2"><strong>Email:</strong> {selectedEmployee.employee.email}</p>
+                      </div>
+                      <div className="col-md-6">
+                        <p className="mb-2">
+                          <strong>Total Expenses:</strong> 
+                          <span className="text-success fw-bold ms-2">₹{selectedEmployee.totalExpenses.toFixed(2)}</span>
+                        </p>
+                        <p className="mb-0">
+                          <strong>Total Transactions:</strong> 
+                          <span className="badge bg-info ms-2">{selectedEmployee.expenseCount}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <h6 className="text-muted mb-3">Transaction History</h6>
+                  {selectedEmployee.expenses.length === 0 ? (
+                    <div className="text-center py-4 text-muted">
+                      <p>No transactions yet</p>
+                    </div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-sm table-hover">
+                        <thead className="bg-light">
+                          <tr>
+                            <th>Category</th>
+                            <th>Location</th>
+                            <th>Type</th>
+                            <th className="text-end">Amount</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedEmployee.expenses.map((exp, idx) => (
+                            <tr key={exp._id || idx}>
+                              <td>{exp.category}</td>
+                              <td><small className="text-muted">{exp.location || '-'}</small></td>
+                              <td>
+                                <span className={`badge ${exp.type === 'Credit' ? 'bg-success' : 'bg-danger'}`}>
+                                  {exp.type}
+                                </span>
+                              </td>
+                              <td className="text-end fw-bold">₹{exp.amount.toFixed(2)}</td>
+                              <td>
+                                <small>
+                                  {new Date(exp.date).toLocaleDateString('en-IN')}
+                                </small>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-5">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminTransactionsPage;
+export default AdminDashboard;
