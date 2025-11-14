@@ -130,19 +130,6 @@ const AdminTransactionsPage = () => {
 
   const netBalance = totalCredit - totalDebit;
 
-  // Group by employee
-  const employeeStats = {};
-  filtered.forEach(exp => {
-    const userId = exp.userId?._id || exp.userId;
-    const userName = exp.userId?.name || 'Unknown';
-    if (!employeeStats[userId]) {
-      employeeStats[userId] = { name: userName, credit: 0, debit: 0, count: 0 };
-    }
-    if (exp.type === 'Credit') employeeStats[userId].credit += exp.amount;
-    if (exp.type === 'Debit') employeeStats[userId].debit += exp.amount;
-    employeeStats[userId].count += 1;
-  });
-
   // Group by category
   const categoryStats = {};
   filtered.forEach(exp => {
@@ -406,38 +393,6 @@ const AdminTransactionsPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Employee Breakdown */}
-      {Object.keys(employeeStats).length > 0 && (
-        <div className="card mb-4 border-0 shadow-sm">
-          <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">Employee Breakdown</h5>
-          </div>
-          <div className="card-body">
-            <div className="row g-3">
-              {Object.entries(employeeStats).map(([userId, stats]) => (
-                <div key={userId} className="col-md-4">
-                  <div className="border rounded p-3">
-                    <h6 className="mb-2">{stats.name}</h6>
-                    <div className="d-flex justify-content-between mb-1">
-                      <small className="text-success">Credit:</small>
-                      <strong className="text-success">{formatCurrency(stats.credit)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between mb-1">
-                      <small className="text-danger">Debit:</small>
-                      <strong className="text-danger">{formatCurrency(stats.debit)}</strong>
-                    </div>
-                    <div className="d-flex justify-content-between">
-                      <small>Transactions:</small>
-                      <span className="badge bg-info">{stats.count}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Category Breakdown */}
       {Object.keys(categoryStats).length > 0 && (
