@@ -119,6 +119,9 @@ const AdminTransactionsPage = () => {
            locMatch && catMatch && typeMatch && dateRangeMatch;
   });
 
+  // Sort filtered transactions by date (latest first)
+  const sortedTransactions = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+
   // Calculate totals
   const totalCredit = filtered
     .filter((e) => e.type === "Credit")
@@ -156,7 +159,7 @@ const AdminTransactionsPage = () => {
 
   const exportToCSV = () => {
     const headers = ["Date", "Employee", "Main Category", "Location", "Category", "Type", "Amount", "Person"];
-    const rows = filtered.map(e => [
+    const rows = sortedTransactions.map(e => [
       new Date(e.date).toLocaleDateString('en-IN'),
       e.userId?.name || 'Unknown',
       e.mainCategory,
@@ -358,88 +361,13 @@ const AdminTransactionsPage = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-success text-white">
-            <div className="card-body">
-              <h6 className="opacity-75 mb-2">Total Credit</h6>
-              <h3 className="mb-0">{formatCurrency(totalCredit)}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-danger text-white">
-            <div className="card-body">
-              <h6 className="opacity-75 mb-2">Total Debit</h6>
-              <h3 className="mb-0">{formatCurrency(totalDebit)}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className={`card border-0 shadow-sm text-white ${netBalance >= 0 ? 'bg-primary' : 'bg-warning'}`}>
-            <div className="card-body">
-              <h6 className="opacity-75 mb-2">Net Balance</h6>
-              <h3 className="mb-0">{formatCurrency(netBalance)}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-3">
-          <div className="card border-0 shadow-sm bg-info text-white">
-            <div className="card-body">
-              <h6 className="opacity-75 mb-2">Transactions</h6>
-              <h3 className="mb-0">{filtered.length}</h3>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Breakdown */}
-      {Object.keys(categoryStats).length > 0 && (
-        <div className="card mb-4 border-0 shadow-sm">
-          <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">Category Breakdown</h5>
-          </div>
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th className="text-end">Credit</th>
-                    <th className="text-end">Debit</th>
-                    <th className="text-end">Net</th>
-                    <th className="text-center">Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(categoryStats)
-                    .sort((a, b) => (b[1].credit + b[1].debit) - (a[1].credit + a[1].debit))
-                    .map(([cat, stats]) => (
-                      <tr key={cat}>
-                        <td>{cat}</td>
-                        <td className="text-end text-success">{formatCurrency(stats.credit)}</td>
-                        <td className="text-end text-danger">{formatCurrency(stats.debit)}</td>
-                        <td className="text-end fw-bold">{formatCurrency(stats.credit - stats.debit)}</td>
-                        <td className="text-center">
-                          <span className="badge bg-secondary">{stats.count}</span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Transactions Table */}
       <div className="card border-0 shadow-sm">
         <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0">Transactions List ({filtered.length})</h5>
+          <h5 className="mb-0">Transactions List ({sortedTransactions.length})</h5>
         </div>
         <div className="card-body p-0">
-          {filtered.length === 0 ? (
+          {sortedTransactions.length === 0 ? (
             <div className="text-center py-5 text-muted">
               <p className="mb-0">No transactions found matching the selected filters.</p>
             </div>
@@ -450,7 +378,6 @@ const AdminTransactionsPage = () => {
                   <tr>
                     <th className="border-0">Date</th>
                     <th className="border-0">Employee</th>
-                    <th className="border-0">Person</th>
                     <th className="border-0">Main Category</th>
                     <th className="border-0">Location</th>
                     <th className="border-0">Category</th>
@@ -459,7 +386,7 @@ const AdminTransactionsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((e, i) => (
+                  {sortedTransactions.map((e, i) => (
                     <tr key={e._id || i}>
                       <td className="align-middle">
                         <small>{new Date(e.date).toLocaleDateString('en-IN')}</small>
@@ -467,7 +394,6 @@ const AdminTransactionsPage = () => {
                       <td className="align-middle">
                         <small className="text-muted">{e.userId?.name || 'Unknown'}</small>
                       </td>
-                      <td className="align-middle">{e.person || '—'}</td>
                       <td className="align-middle">
                         <small className="text-muted">{e.mainCategory}</small>
                       </td>
