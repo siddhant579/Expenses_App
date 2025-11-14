@@ -14,8 +14,14 @@ const AdminDashboard = () => {
   const [allExpenses, setAllExpenses] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState("All");
 
   const orgCode = user?.organizationId?.code || 'N/A';
+
+  const monthsList = [
+    "All", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
 
   useEffect(() => {
     fetchDashboardData();
@@ -93,17 +99,28 @@ const AdminDashboard = () => {
     );
   }
 
-  // Calculate totals
-  const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  // Filter expenses by selected month
+  const filteredExpenses = selectedMonth === "All" 
+    ? allExpenses 
+    : allExpenses.filter(expense => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate.toLocaleString("default", { month: "long" }) === selectedMonth;
+      });
+
+  // Calculate totals based on filtered expenses
+  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   const employeeCount = employees.length;
-  const transactionCount = allExpenses.length;
-  const totalDebited = allExpenses
+  const transactionCount = filteredExpenses.length;
+  const totalDebited = filteredExpenses
     .filter(e => e.type === 'Debit')
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalCredited = filteredExpenses
+    .filter(e => e.type === 'Credit')
     .reduce((sum, e) => sum + (e.amount || 0), 0);
 
   // Group expenses by employee for display with debit/credit separation
   const employeeExpenseMap = {};
-  allExpenses.forEach(expense => {
+  filteredExpenses.forEach(expense => {
     const userId = expense.userId?._id || expense.userId;
     if (!employeeExpenseMap[userId]) {
       employeeExpenseMap[userId] = {
@@ -124,7 +141,7 @@ const AdminDashboard = () => {
 
   // Group by category - fix the categoryStats structure to match what's used in the table
   const categoryStats = {};
-  allExpenses.forEach(expense => {
+  filteredExpenses.forEach(expense => {
     const category = expense.category || 'Uncategorized';
     if (!categoryStats[category]) {
       categoryStats[category] = {
@@ -216,7 +233,6 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-
         <div className="col-lg-3 col-md-6">
           <div className="card border-0 shadow-sm h-100 bg-danger text-white">
             <div className="card-body">
@@ -232,15 +248,47 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+        <div className="col-lg-3 col-md-6">
+          <div className="card border-0 shadow-sm h-100 bg-success text-white">
+            <div className="card-body">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <p className="mb-1 opacity-75 small">Total Credited Amount</p>
+                  <h3 className="mb-0 fw-bold">₹{totalCredited.toFixed(2)}</h3>
+                </div>
+                <div className="rounded-circle bg-white bg-opacity-25 p-3">
+                  <DollarSign size={28} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Employees Overview */}
       <div className="card mb-4 border-0 shadow-sm">
         <div className="card-header bg-white border-0 pt-4">
-          <h5 className="mb-0 d-flex align-items-center">
-            <Users className="me-2" size={20} />
-            Employees Overview
-          </h5>
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0 d-flex align-items-center">
+              <Users className="me-2" size={20} />
+              Employees Overview
+            </h5>
+            <div className="d-flex align-items-center gap-2">
+              <label className="form-label mb-0 fw-semibold">📅 Month:</label>
+              <select
+                className="form-select form-select-sm"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                style={{ width: '150px' }}
+              >
+                {monthsList.map((month) => (
+                  <option key={month} value={month}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
         <div className="card-body p-0">
           {employees.length === 0 ? (
@@ -255,7 +303,8 @@ const AdminDashboard = () => {
                   <tr>
                     <th className="border-0">Employee</th>
                     <th className="border-0">Email</th>
-                    <th className="border-0 text-end">Total Spent (Debited)</th>
+                    <th className="border-0 text-end">Debited</th>
+                    <th className="border-0 text-end">Credited</th>
                     <th className="border-0 text-end">Balance</th>
                     <th className="border-0 text-end">Transactions</th>
                   </tr>
@@ -283,6 +332,9 @@ const AdminDashboard = () => {
                         <td className="align-middle text-end fw-bold text-danger">
                           ₹{empStats.totalDebited.toFixed(2)}
                         </td>
+                        <td className="align-middle text-end fw-bold text-success">
+                          ₹{empStats.totalCredited.toFixed(2)}
+                        </td>
                         <td className="align-middle text-end fw-bold">
                           <span className={balance >= 0 ? 'text-danger' : 'text-success'}>
                             ₹{Math.abs(balance).toFixed(2)}
@@ -306,7 +358,7 @@ const AdminDashboard = () => {
       {Object.keys(categoryStats).length > 0 && (
         <div className="card mb-4 border-0 shadow-sm">
           <div className="card-header bg-white border-0 pt-4">
-            <h5 className="mb-0">Category Breakdown</h5>
+            <h5 className="mb-0">Category Breakdown {selectedMonth !== "All" && `- ${selectedMonth}`}</h5>
           </div>
           <div className="card-body">
             <div className="table-responsive">
