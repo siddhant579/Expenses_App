@@ -98,19 +98,24 @@ const AdminDashboard = () => {
     .filter(e => e.type === 'Debit')
     .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-  // Group expenses by employee for display
+  // Group expenses by employee for display with debit/credit separation
   const employeeExpenseMap = {};
   allExpenses.forEach(expense => {
     const userId = expense.userId?._id || expense.userId;
     if (!employeeExpenseMap[userId]) {
       employeeExpenseMap[userId] = {
         expenses: [],
-        total: 0,
+        totalDebited: 0,
+        totalCredited: 0,
         count: 0
       };
     }
     employeeExpenseMap[userId].expenses.push(expense);
-    employeeExpenseMap[userId].total += expense.amount || 0;
+    if (expense.type === 'Debit') {
+      employeeExpenseMap[userId].totalDebited += expense.amount || 0;
+    } else if (expense.type === 'Credit') {
+      employeeExpenseMap[userId].totalCredited += expense.amount || 0;
+    }
     employeeExpenseMap[userId].count += 1;
   });
 
@@ -242,14 +247,20 @@ const AdminDashboard = () => {
                   <tr>
                     <th className="border-0">Employee</th>
                     <th className="border-0">Email</th>
-                    <th className="border-0 text-end">Total Expenses</th>
+                    <th className="border-0 text-end">Total Spent (Debited)</th>
+                    <th className="border-0 text-end">Balance</th>
                     <th className="border-0 text-end">Transactions</th>
-                    <th className="border-0 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {employees.map((emp) => {
-                    const empStats = employeeExpenseMap[emp._id] || { total: 0, count: 0 };
+                    const empStats = employeeExpenseMap[emp._id] || { 
+                      totalDebited: 0, 
+                      totalCredited: 0, 
+                      count: 0 
+                    };
+                    const balance = empStats.totalDebited - empStats.totalCredited;
+                    
                     return (
                       <tr key={emp._id}>
                         <td className="align-middle">
@@ -261,21 +272,17 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="align-middle text-muted">{emp.email}</td>
-                        <td className="align-middle text-end fw-bold text-success">
-                          ₹{empStats.total.toFixed(2)}
+                        <td className="align-middle text-end fw-bold text-danger">
+                          ₹{empStats.totalDebited.toFixed(2)}
+                        </td>
+                        <td className="align-middle text-end fw-bold">
+                          <span className={balance >= 0 ? 'text-danger' : 'text-success'}>
+                            ₹{Math.abs(balance).toFixed(2)}
+                            {balance < 0 && ' (Credit)'}
+                          </span>
                         </td>
                         <td className="align-middle text-end">
                           <span className="badge bg-info">{empStats.count}</span>
-                        </td>
-                        <td className="align-middle text-center">
-                          <button
-                            onClick={() => viewEmployeeDetails(emp._id)}
-                            className="btn btn-sm btn-outline-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#employeeModal"
-                          >
-                            <Eye size={16} />
-                          </button>
                         </td>
                       </tr>
                     );
