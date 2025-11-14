@@ -6,6 +6,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTransactionsPage from "./pages/AdminTransactions";
 import LoginPage from "./pages/login";
+import ForgotPasswordPage from "./pages/ForgetPasswordPage";
 import RegistrationPage from "./pages/Registration";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -112,6 +113,10 @@ const AppContent = () => {
                     <RegistrationPage />
                   </PublicRoute>
                 }
+              />  
+              <Route
+                path="/forgot-password"
+                element={<ForgotPasswordPage />}
               />
 
               {/* Protected Employee Routes */}
