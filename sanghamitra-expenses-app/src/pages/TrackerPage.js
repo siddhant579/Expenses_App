@@ -25,7 +25,7 @@ const TrackerPage = () => {
 
   // Static categories data
   const categories = {
-    mainCategories: ["Hyderabad Office", "Wardha Office", "Engineering Based", "Chaityabhoomi", "Deekshabhoomi"],
+    mainCategories: ["Hyderabad Office", "Wardha Office", "Engineering Based", "Chaityabhoomi", "Deekshabhoomi", "Books Publication", "Kids Toys", "Tshirt"],
     expenseCategories: [
       "Grocery", 
       "Household Work", 
