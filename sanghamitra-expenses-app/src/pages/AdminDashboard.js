@@ -203,21 +203,7 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-        <div className="col-lg-3 col-md-6">
-          <div className="card border-0 shadow-sm h-100 bg-success text-white">
-            <div className="card-body">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <p className="mb-1 opacity-75 small">Total Transaction Amount</p>
-                  <h3 className="mb-0 fw-bold">₹{totalExpenses.toFixed(2)}</h3>
-                </div>
-                <div className="rounded-circle bg-white bg-opacity-25 p-3">
-                  <DollarSign size={28} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
         <div className="col-lg-3 col-md-6">
           <div className="card border-0 shadow-sm h-100 bg-danger text-white">
             <div className="card-body">
@@ -228,42 +214,6 @@ const AdminDashboard = () => {
                 </div>
                 <div className="rounded-circle bg-white bg-opacity-25 p-3">
                   <DollarSign size={28} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Stats Row */}
-      <div className="row g-3 mb-4">
-        <div className="col-md-6">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
-                  <Users className="text-primary" size={28} />
-                </div>
-                <div>
-                  <h6 className="text-muted mb-1 small">Active Employees</h6>
-                  <h3 className="mb-0 fw-bold">{employeeCount}</h3>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center">
-                <div className="rounded-circle bg-success bg-opacity-10 p-3 me-3">
-                  <TrendingUp className="text-success" size={28} />
-                </div>
-                <div>
-                  <h6 className="text-muted mb-1 small">Avg Transaction</h6>
-                  <h3 className="mb-0 fw-bold">
-                    ₹{transactionCount > 0 ? (totalExpenses / transactionCount).toFixed(2) : 0}
-                  </h3>
                 </div>
               </div>
             </div>
