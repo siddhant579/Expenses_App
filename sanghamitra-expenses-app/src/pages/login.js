@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Users, Eye, EyeOff } from 'lucide-react';
+import { Wallet, Eye, EyeOff } from 'lucide-react';
 
 const API_URL = 'https://expenses-app-server-one.vercel.app/api';
 
@@ -56,7 +56,7 @@ const LoginPage = () => {
           <div className="text-center mb-4">
             <div className="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
                  style={{ width: '64px', height: '64px' }}>
-              <DollarSign size={32} className="text-white" />
+              <Wallet size={32} className="text-white" />
             </div>
             <h2 className="fw-bold">Welcome Back</h2>
             <p className="text-muted">Sign in to your account</p>
@@ -145,4 +145,5 @@ const LoginPage = () => {
 
 
 export default LoginPage;
+
 
