@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-
 const TransactionsPage = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,33 +7,32 @@ const TransactionsPage = () => {
   const [selectedYear, setSelectedYear] = useState("All");
   const [selectedMainCategory, setSelectedMainCategory] = useState("All");
   const [selectedLocation, setSelectedLocation] = useState("All");
+  const [editingId, setEditingId] = useState(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [announcement, setAnnouncement] = useState(null);
 
   const monthsList = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
   ];
 
-  // Years till 2030
   const yearOptions = [
     "2025",
     "2026","2027","2028","2029","2030"
   ];
 
-  // Fixed main categories
   const mainCategories = [
     "Event Based",
     "Office Based",
     "Engineering Based"
   ];
 
-  // Location groups
   const locationGroups = {
     "Event Based": ["Chaityabhoomi", "Deekshabhoomi"],
     "Office Based": ["Wardha", "Hyderabad"],
     "Engineering Based": ["Hyderabad", "Wardha"],
   };
 
-  // Fetch expenses and organization data
   useEffect(() => {
     fetchExpenses();
   }, []);
@@ -44,7 +42,7 @@ const TransactionsPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses", {
+      const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -54,7 +52,6 @@ const TransactionsPage = () => {
         const data = await res.json();
         setExpenses(data);
         
-        // Get organization from first expense or user data
         if (data.length > 0 && data[0].userId && data[0].userId.organizationId) {
           setOrganization(data[0].userId.organizationId);
         }
@@ -66,7 +63,64 @@ const TransactionsPage = () => {
     }
   };
 
-  // Filter calculation
+  const showAnnouncement = (message, type = 'success') => {
+    setAnnouncement({ message, type });
+    setTimeout(() => setAnnouncement(null), 3000);
+  };
+
+  const handleEditClick = (expense) => {
+    setEditingId(expense._id);
+    setEditAmount(expense.amount.toString());
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditAmount("");
+  };
+
+  const handleSaveEdit = async (expenseId) => {
+    const newAmount = parseFloat(editAmount);
+    
+    if (isNaN(newAmount) || newAmount <= 0) {
+      showAnnouncement("⚠️ Please enter a valid amount", "error");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showAnnouncement("⚠️ Please login again", "error");
+        return;
+      }
+
+      // Update in backend
+      const res = await fetch(`"https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount: newAmount }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update expense");
+      }
+
+      // Update local state
+      setExpenses(expenses.map(exp => 
+        exp._id === expenseId ? { ...exp, amount: newAmount } : exp
+      ));
+      
+      showAnnouncement("✅ Amount updated successfully!", "success");
+      setEditingId(null);
+      setEditAmount("");
+    } catch (err) {
+      console.error("Error updating expense:", err);
+      showAnnouncement("❌ Failed to update amount. Please try again.", "error");
+    }
+  };
+
   const calculateTotalsFor = (month, year, mainCat, loc) => {
     const filtered = expenses.filter((e) => {
       const expenseDate = new Date(e.date);
@@ -154,6 +208,26 @@ const TransactionsPage = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Announcement Banner */}
+      {announcement && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '15px 20px',
+          borderRadius: '8px',
+          backgroundColor: announcement.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: announcement.type === 'success' ? '#155724' : '#721c24',
+          border: `1px solid ${announcement.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          zIndex: 1000,
+          fontWeight: '600',
+          minWidth: '300px'
+        }}>
+          {announcement.message}
+        </div>
+      )}
+
       {/* Header with Organization Name */}
       <div style={{ marginBottom: '30px', textAlign: 'center' }}>
         <h1 style={{ 
@@ -181,7 +255,6 @@ const TransactionsPage = () => {
         gap: '20px',
         marginBottom: '30px'
       }}>
-        {/* Total Transactions Card */}
         <div style={cardStyle}>
           <div style={cardIconStyle}>📈</div>
           <div style={cardContentStyle}>
@@ -190,7 +263,6 @@ const TransactionsPage = () => {
           </div>
         </div>
 
-        {/* Total Credit Card */}
         <div style={{...cardStyle, borderLeft: '4px solid #27ae60'}}>
           <div style={cardIconStyle}>💹</div>
           <div style={cardContentStyle}>
@@ -201,7 +273,6 @@ const TransactionsPage = () => {
           </div>
         </div>
 
-        {/* Total Debit Card */}
         <div style={{...cardStyle, borderLeft: '4px solid #e74c3c'}}>
           <div style={cardIconStyle}>📉</div>
           <div style={cardContentStyle}>
@@ -212,7 +283,6 @@ const TransactionsPage = () => {
           </div>
         </div>
 
-        {/* Net Balance Card */}
         <div style={{...cardStyle, borderLeft: '4px solid #3498db'}}>
           <div style={cardIconStyle}>💰</div>
           <div style={cardContentStyle}>
@@ -242,7 +312,6 @@ const TransactionsPage = () => {
           alignItems: "center",
           flexWrap: "wrap",
         }}>
-          {/* Main Category */}
           <div style={filterGroupStyle}>
             <label htmlFor="mainCat" style={labelStyle}>🏢 Main Category:</label>
             <select
@@ -261,7 +330,6 @@ const TransactionsPage = () => {
             </select>
           </div>
 
-          {/* Location Dropdown */}
           {selectedMainCategory !== "All" && (
             <div style={filterGroupStyle}>
               <label htmlFor="location" style={labelStyle}>📍 Location:</label>
@@ -279,7 +347,6 @@ const TransactionsPage = () => {
             </div>
           )}
 
-          {/* Month Filter */}
           <div style={filterGroupStyle}>
             <label htmlFor="month" style={labelStyle}>📅 Month:</label>
             <select
@@ -295,7 +362,6 @@ const TransactionsPage = () => {
             </select>
           </div>
 
-          {/* Year Filter */}
           <div style={filterGroupStyle}>
             <label htmlFor="year" style={labelStyle}>🗓️ Year:</label>
             <select
@@ -346,7 +412,7 @@ const TransactionsPage = () => {
         </div>
       </div>
 
-      {/* Category Totals */}
+      {/* Category Breakdown */}
       {Object.keys(categoryTotals).length > 0 && (
         <div style={{ marginBottom: '20px' }}>
           <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>📊 Category Breakdown</h3>
@@ -416,6 +482,7 @@ const TransactionsPage = () => {
                   <th style={thStyle}>Type</th>
                   <th style={thStyle}>Amount</th>
                   <th style={thStyle}>Note</th>
+                  <th style={thStyle}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -439,9 +506,77 @@ const TransactionsPage = () => {
                       fontWeight: '600',
                       color: e.type === 'Credit' ? '#27ae60' : '#e74c3c'
                     }}>
-                      {formatCurrency(e.amount)}
+                      {editingId === e._id ? (
+                        <input
+                          type="number"
+                          value={editAmount}
+                          onChange={(e) => setEditAmount(e.target.value)}
+                          style={{
+                            width: '100px',
+                            padding: '5px',
+                            border: '2px solid #3498db',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                          }}
+                          autoFocus
+                        />
+                      ) : (
+                        formatCurrency(e.amount)
+                      )}
                     </td>
                     <td style={tdStyle}>{e.note || '-'}</td>
+                    <td style={tdStyle}>
+                      {editingId === e._id ? (
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button
+                            onClick={() => handleSaveEdit(e._id)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#27ae60',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            ✓ Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#95a5a6',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            ✕ Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleEditClick(e)}
+                          style={{
+                            padding: '5px 12px',
+                            backgroundColor: '#3498db',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -453,7 +588,6 @@ const TransactionsPage = () => {
   );
 };
 
-// Styles
 const cardStyle = {
   backgroundColor: '#fff',
   padding: '20px',
