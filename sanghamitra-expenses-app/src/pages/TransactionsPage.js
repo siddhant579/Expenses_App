@@ -94,7 +94,7 @@ const TransactionsPage = () => {
       }
 
       // Update in backend
-      const res = await fetch(`"https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
+      const res = await fetch(`https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
