@@ -168,6 +168,48 @@ router.get("/employees/:userId", verifyToken, async (req, res) => {
   }
 });
 
+// 🔐 PUT - Update expense amount (Protected)
+router.put("/expenses/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount } = req.body;
+
+    // Validate amount
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid amount' });
+    }
+
+    // Find the expense
+    const expense = await Expense.findById(id);
+    
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    // Check if expense belongs to user's organization
+    if (expense.organizationId.toString() !== req.user.organizationId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this expense' });
+    }
+
+    // Employee can only update their own expenses, admin can update any
+    if (req.user.role === 'employee' && expense.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this expense' });
+    }
+
+    // Update the amount
+    expense.amount = parseFloat(amount);
+    await expense.save();
+
+    // Populate user data before sending response
+    await expense.populate('userId', 'name email role');
+
+    res.json(expense);
+  } catch (err) {
+    console.error('Error updating expense:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // 🧾 Admin Registration (creates organization)
 router.post("/register-admin", async (req, res) => {
   try {
