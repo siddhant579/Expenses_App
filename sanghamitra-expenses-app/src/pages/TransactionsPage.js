@@ -42,7 +42,7 @@ const TransactionsPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses, {
+      const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses", {
         headers: {
           'Authorization': `Bearer ${token}`
         }
