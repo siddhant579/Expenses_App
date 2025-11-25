@@ -168,16 +168,13 @@ router.get("/employees/:userId", verifyToken, async (req, res) => {
   }
 });
 
-// 🔐 PUT - Update expense amount (Protected)
+// 🔐 PUT - Update expense amount and/or note (Protected)
 router.put("/expenses/:id", verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount } = req.body;
+    const { amount, note } = req.body;
 
-    // Validate amount
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ message: 'Invalid amount' });
-    }
+    console.log('Update request:', { id, amount, note }); // Debug log
 
     // Find the expense
     const expense = await Expense.findById(id);
@@ -196,14 +193,39 @@ router.put("/expenses/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this expense' });
     }
 
-    // Update the amount
-    expense.amount = parseFloat(amount);
-    await expense.save();
+    // Build update object
+    const updateData = {};
+    
+    // Update amount if provided
+    if (amount !== undefined && amount !== null) {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: 'Invalid amount' });
+      }
+      updateData.amount = parsedAmount;
+    }
 
-    // Populate user data before sending response
-    await expense.populate('userId', 'name email role');
+    // Update note if provided (even if empty string)
+    if (note !== undefined) {
+      updateData.note = note;
+    }
 
-    res.json(expense);
+    console.log('Updating with:', updateData); // Debug log
+
+    // Use findByIdAndUpdate for better handling
+    const updatedExpense = await Expense.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).populate('userId', 'name email role');
+
+    if (!updatedExpense) {
+      return res.status(404).json({ message: 'Failed to update expense' });
+    }
+
+    console.log('Updated expense:', updatedExpense); // Debug log
+
+    res.json(updatedExpense);
   } catch (err) {
     console.error('Error updating expense:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
