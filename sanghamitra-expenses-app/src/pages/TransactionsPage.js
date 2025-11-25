@@ -9,6 +9,8 @@ const TransactionsPage = () => {
   const [selectedLocation, setSelectedLocation] = useState("All");
   const [editingId, setEditingId] = useState(null);
   const [editAmount, setEditAmount] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editNote, setEditNote] = useState("");
   const [announcement, setAnnouncement] = useState(null);
 
   const monthsList = [
@@ -73,9 +75,19 @@ const TransactionsPage = () => {
     setEditAmount(expense.amount.toString());
   };
 
+  const handleEditNoteClick = (expense) => {
+    setEditingNoteId(expense._id);
+    setEditNote(expense.note || "");
+  };
+
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditAmount("");
+  };
+
+  const handleCancelNoteEdit = () => {
+    setEditingNoteId(null);
+    setEditNote("");
   };
 
   const handleSaveEdit = async (expenseId) => {
@@ -118,6 +130,42 @@ const TransactionsPage = () => {
     } catch (err) {
       console.error("Error updating expense:", err);
       showAnnouncement("❌ Failed to update amount. Please try again.", "error");
+    }
+  };
+
+  const handleSaveNoteEdit = async (expenseId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showAnnouncement("⚠️ Please login again", "error");
+        return;
+      }
+
+      // Update in backend
+      const res = await fetch(`https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ note: editNote }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update note");
+      }
+
+      // Update local state
+      setExpenses(expenses.map(exp => 
+        exp._id === expenseId ? { ...exp, note: editNote } : exp
+      ));
+      
+      showAnnouncement("✅ Note updated successfully!", "success");
+      setEditingNoteId(null);
+      setEditNote("");
+    } catch (err) {
+      console.error("Error updating note:", err);
+      showAnnouncement("❌ Failed to update note. Please try again.", "error");
     }
   };
 
@@ -524,58 +572,129 @@ const TransactionsPage = () => {
                         formatCurrency(e.amount)
                       )}
                     </td>
-                    <td style={tdStyle}>{e.note || '-'}</td>
                     <td style={tdStyle}>
-                      {editingId === e._id ? (
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => handleSaveEdit(e._id)}
-                            style={{
-                              padding: '5px 10px',
-                              backgroundColor: '#27ae60',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}
-                          >
-                            ✓ Save
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            style={{
-                              padding: '5px 10px',
-                              backgroundColor: '#95a5a6',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: '600'
-                            }}
-                          >
-                            ✕ Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleEditClick(e)}
+                      {editingNoteId === e._id ? (
+                        <input
+                          type="text"
+                          value={editNote}
+                          onChange={(e) => setEditNote(e.target.value)}
                           style={{
-                            padding: '5px 12px',
-                            backgroundColor: '#3498db',
-                            color: '#fff',
-                            border: 'none',
+                            width: '100%',
+                            padding: '5px',
+                            border: '2px solid #9b59b6',
                             borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600'
+                            fontSize: '14px'
                           }}
-                        >
-                          ✏️ Edit
-                        </button>
+                          autoFocus
+                        />
+                      ) : (
+                        e.note || '-'
                       )}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                        {editingId === e._id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEdit(e._id)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#27ae60',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#95a5a6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleEditClick(e)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#3498db',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            ✏️ Amount
+                          </button>
+                        )}
+                        
+                        {editingNoteId === e._id ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveNoteEdit(e._id)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#27ae60',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={handleCancelNoteEdit}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: '#95a5a6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleEditNoteClick(e)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: '#9b59b6',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            📝 Note
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
