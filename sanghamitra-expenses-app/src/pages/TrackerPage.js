@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const getToday = () => {
-  return new Date().toISOString().split("T")[0];
-};
-
 const TrackerPage = () => {
   const [expenseForms, setExpenseForms] = useState([
     {
@@ -14,8 +10,8 @@ const TrackerPage = () => {
       note: "",
       type: "",
       amount: "",
-      date: getToday(),
-      month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+      date: "", // 🔥 REMOVED DEFAULT DATE
+      month: "",
     },
   ]);
 
@@ -67,6 +63,18 @@ const TrackerPage = () => {
       updated[index].type = autoCreditCategories.includes(value)
         ? "Credit"
         : "Debit";
+    } else if (name === "date") {
+      // 🔥 NEW: When date changes, auto-calculate month
+      updated[index].date = value;
+      if (value) {
+        const dateObj = new Date(value);
+        updated[index].month = dateObj.toLocaleString("default", { 
+          month: "long", 
+          year: 'numeric' 
+        });
+      } else {
+        updated[index].month = "";
+      }
     } else {
       updated[index][name] = value;
     }
@@ -84,8 +92,8 @@ const TrackerPage = () => {
         note: "",
         type: "",
         amount: "",
-        date: getToday(),
-        month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+        date: "", // 🔥 EMPTY DATE
+        month: "",
       },
     ]);
   };
@@ -101,8 +109,8 @@ const TrackerPage = () => {
           note: "",
           type: "",
           amount: "",
-          date: getToday(),
-          month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+          date: "",
+          month: "",
         },
       ]);
     } else {
@@ -136,9 +144,9 @@ const TrackerPage = () => {
           month
         } = exp;
 
-        // Validation
-        if (!mainCategory || !category || !type || !amount) {
-          alert("⚠️ Please fill all required fields before submitting.");
+        // 🔥 ENHANCED VALIDATION - Now includes date
+        if (!mainCategory || !category || !type || !amount || !date) {
+          alert("⚠️ Please fill all required fields (including date) before submitting.");
           setLoading(false);
           return;
         }
@@ -147,7 +155,7 @@ const TrackerPage = () => {
 
         const expenseData = {
           mainCategory,
-          location: mainCategory, // Using mainCategory as location since we removed project/site
+          location: mainCategory,
           category: customCategory || category,
           note,
           type,
@@ -156,7 +164,7 @@ const TrackerPage = () => {
           month
         };
 
-        console.log("Submitting expense:", expenseData); // Debug log
+        console.log("Submitting expense:", expenseData);
 
         // Save expense to backend
         const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses", {
@@ -186,7 +194,6 @@ const TrackerPage = () => {
           submittedData.push(savedExpense);
         } catch (e) {
           console.error("Error parsing response JSON:", e);
-          // Even if we can't parse the response, consider it successful if status is ok
           submittedData.push(expenseData);
         }
       }
@@ -203,8 +210,8 @@ const TrackerPage = () => {
           note: "",
           type: "",
           amount: "",
-          date: getToday(),
-          month: new Date().toLocaleString("default", { month: "long", year: 'numeric' }),
+          date: "",
+          month: "",
         },
       ]);
 
@@ -230,7 +237,37 @@ const TrackerPage = () => {
         <h3>Add New Expense</h3>
         {expenseForms.map((form, idx) => (
           <div className="expense-card" key={idx}>
+            {/* 🔥 NEW: Date Input Row at the top */}
             <div className="form-row">
+              <div className="form-group">
+                <label>Expense Date *</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={(e) => handleChange(idx, e)}
+                  required
+                  style={{
+                    padding: '10px',
+                    fontSize: '14px',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '6px',
+                    width: '100%',
+                    cursor: 'pointer'
+                  }}
+                />
+                {form.month && (
+                  <small style={{ 
+                    display: 'block', 
+                    marginTop: '5px', 
+                    color: '#6b7280',
+                    fontSize: '12px'
+                  }}>
+                    📅 Month: {form.month}
+                  </small>
+                )}
+              </div>
+
               <div className="form-group">
                 <label>Expense Type *</label>
                 <select
@@ -247,7 +284,9 @@ const TrackerPage = () => {
                   ))}
                 </select>
               </div>
+            </div>
 
+            <div className="form-row">
               {form.mainCategory && (
                 <div className="form-group">
                   <label>Expense Category *</label>
@@ -266,9 +305,7 @@ const TrackerPage = () => {
                   </select>
                 </div>
               )}
-            </div>
 
-            <div className="form-row">
               {(form.category === "Others" || form.category === "Products and Services") && (
                 <div className="form-group">
                   <label>Custom Details</label>
@@ -281,7 +318,9 @@ const TrackerPage = () => {
                   />
                 </div>
               )}
+            </div>
 
+            <div className="form-row">
               {form.category && (
                 <div className="form-group">
                   <label>Transaction Type</label>
@@ -359,6 +398,7 @@ const TrackerPage = () => {
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>Month</th>
                   <th>Expense Type</th>
                   <th>Category</th>
                   <th>Type</th>
@@ -369,7 +409,8 @@ const TrackerPage = () => {
               <tbody>
                 {submittedExpenses.map((expense, index) => (
                   <tr key={index}>
-                    <td>{new Date(expense.date).toLocaleDateString()}</td>
+                    <td>{new Date(expense.date).toLocaleDateString('en-IN')}</td>
+                    <td>{expense.month}</td>
                     <td>{expense.mainCategory}</td>
                     <td>{expense.category}</td>
                     <td>
@@ -388,7 +429,7 @@ const TrackerPage = () => {
       )}
 
       <div className="form-info">
-        <p><strong>Note:</strong> Expenses are automatically associated with your account</p>
+        <p><strong>Note:</strong> All fields marked with * are required. Please enter the actual expense date.</p>
       </div>
     </div>
   );
