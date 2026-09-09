@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import { Download, Filter, X } from 'lucide-react';
 
-const API_URL = 'https://expenses-app-server-one.vercel.app/api';
+const API_URL = 'http://localhost:5000/api';
 
 const AdminTransactionsPage = () => {
   const { token } = useAuth();
@@ -121,17 +121,6 @@ const AdminTransactionsPage = () => {
 
   // Sort filtered transactions by date (latest first)
   const sortedTransactions = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  // Calculate totals
-  const totalCredit = filtered
-    .filter((e) => e.type === "Credit")
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const totalDebit = filtered
-    .filter((e) => e.type === "Debit")
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const netBalance = totalCredit - totalDebit;
 
   // Group by category
   const categoryStats = {};

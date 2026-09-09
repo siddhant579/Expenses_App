@@ -1,15 +1,14 @@
 // src/pages/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Copy, CheckCircle, Users, DollarSign, TrendingUp, Calendar, Tag, User, Eye } from 'lucide-react';
+import { Copy, CheckCircle, Users, DollarSign, TrendingUp, User } from 'lucide-react';
 
-const API_URL = 'https://expenses-app-server-one.vercel.app/api';
+const API_URL = 'http://localhost:5000/api';
 
 const AdminDashboard = () => {
   const { user, token } = useAuth();
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [stats, setStats] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -25,6 +24,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchDashboardData = async () => {
@@ -38,13 +38,6 @@ const AdminDashboard = () => {
       const expensesData = await expensesResponse.json();
       setAllExpenses(expensesData);
 
-      // Fetch statistics
-      const statsResponse = await fetch(`${API_URL}/expenses/stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const statsData = await statsResponse.json();
-      setStats(statsData);
-
       // Fetch employees list
       const employeesResponse = await fetch(`${API_URL}/employees`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -52,7 +45,7 @@ const AdminDashboard = () => {
       const employeesData = await employeesResponse.json();
       setEmployees(employeesData);
 
-      console.log('Dashboard Data:', { stats: statsData, employees: employeesData, expenses: expensesData });
+      console.log('Dashboard Data:', { employees: employeesData, expenses: expensesData });
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -74,6 +67,7 @@ const AdminDashboard = () => {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const viewEmployeeDetails = async (employeeId) => {
     try {
       const response = await fetch(`${API_URL}/employees/${employeeId}`, {
@@ -108,7 +102,6 @@ const AdminDashboard = () => {
       });
 
   // Calculate totals based on filtered expenses
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
   const employeeCount = employees.length;
   const transactionCount = filteredExpenses.length;
   const totalDebited = filteredExpenses
