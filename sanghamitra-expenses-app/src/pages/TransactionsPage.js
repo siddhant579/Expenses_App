@@ -17,6 +17,7 @@ const TransactionsPage = () => {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editNote, setEditNote] = useState("");
   const [announcement, setAnnouncement] = useState(null);
+  const [showTransactions, setShowTransactions] = useState(false);
 
   const monthsList = [
     "January", "February", "March", "April", "May", "June",
@@ -513,10 +514,21 @@ const TransactionsPage = () => {
 
       {/* Transactions Table */}
       <div>
-        <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+        <h3
+          onClick={() => setShowTransactions((s) => !s)}
+          style={{
+            color: '#2c3e50',
+            marginBottom: '15px',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+        >
+          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
+            {showTransactions ? '▾' : '▸'}
+          </span>
           📜 All Transactions ({filtered.length})
         </h3>
-        {filtered.length === 0 ? (
+        {!showTransactions ? null : filtered.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '40px',
@@ -818,10 +830,23 @@ const addressCellStyle = {
   lineHeight: 1.4,
 };
 
+const collapsibleHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '12px',
+  padding: '16px 20px',
+  backgroundColor: '#f8f9fa',
+  cursor: 'pointer',
+  userSelect: 'none',
+};
+
 // Reusable collapsible breakdown panel (grouped by section or by category)
 const BreakdownPanel = ({ title, keyHeader, rows }) => {
   const [view, setView] = useState("All");
   const [expanded, setExpanded] = useState(null);
+  const [collapsed, setCollapsed] = useState(true);
 
   if (!rows || rows.length === 0) return null;
 
@@ -836,32 +861,38 @@ const BreakdownPanel = ({ title, keyHeader, rows }) => {
       boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
       overflow: 'hidden'
     }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
-        padding: '16px 20px',
-        borderBottom: '1px solid #e9ecef',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3 style={{ color: '#2c3e50', margin: 0 }}>{title}</h3>
-        <select
-          value={view}
-          onChange={(e) => {
-            setView(e.target.value);
-            setExpanded(null);
-          }}
-          style={selectStyle}
-        >
-          <option value="All">All ({rows.length})</option>
-          {rows.map((r) => (
-            <option key={r.key} value={r.key}>{r.key}</option>
-          ))}
-        </select>
+      <div
+        onClick={() => setCollapsed((c) => !c)}
+        style={{
+          ...collapsibleHeaderStyle,
+          borderBottom: collapsed ? 'none' : '1px solid #e9ecef',
+        }}
+      >
+        <h3 style={{ color: '#2c3e50', margin: 0 }}>
+          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
+            {collapsed ? '▸' : '▾'}
+          </span>
+          {title} ({rows.length})
+        </h3>
+        {!collapsed && (
+          <select
+            value={view}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              setView(e.target.value);
+              setExpanded(null);
+            }}
+            style={selectStyle}
+          >
+            <option value="All">All ({rows.length})</option>
+            {rows.map((r) => (
+              <option key={r.key} value={r.key}>{r.key}</option>
+            ))}
+          </select>
+        )}
       </div>
 
+      {!collapsed && (
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
           <thead>
@@ -952,6 +983,7 @@ const BreakdownPanel = ({ title, keyHeader, rows }) => {
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 };
@@ -960,6 +992,7 @@ const BreakdownPanel = ({ title, keyHeader, rows }) => {
 const BookOrdersPanel = ({ orders }) => {
   const SANGHAMITRA = "Transfer to Sanghamitra";
   const [view, setView] = useState(SANGHAMITRA);
+  const [collapsed, setCollapsed] = useState(true);
 
   if (!orders || orders.length === 0) return null;
 
@@ -989,30 +1022,36 @@ const BookOrdersPanel = ({ orders }) => {
       boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
       overflow: 'hidden'
     }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
-        padding: '16px 20px',
-        borderBottom: '1px solid #e9ecef',
-        backgroundColor: '#f8f9fa'
-      }}>
-        <h3 style={{ color: '#2c3e50', margin: 0 }}>📚 Book / Frames Orders</h3>
-        <select
-          value={view}
-          onChange={(e) => setView(e.target.value)}
-          style={selectStyle}
-        >
-          {options.map((o) => (
-            <option key={o} value={o}>
-              {o === "All" ? `All (${orders.length})` : o}
-            </option>
-          ))}
-        </select>
+      <div
+        onClick={() => setCollapsed((c) => !c)}
+        style={{
+          ...collapsibleHeaderStyle,
+          borderBottom: collapsed ? 'none' : '1px solid #e9ecef',
+        }}
+      >
+        <h3 style={{ color: '#2c3e50', margin: 0 }}>
+          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
+            {collapsed ? '▸' : '▾'}
+          </span>
+          📚 Book / Frames Orders ({orders.length})
+        </h3>
+        {!collapsed && (
+          <select
+            value={view}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setView(e.target.value)}
+            style={selectStyle}
+          >
+            {options.map((o) => (
+              <option key={o} value={o}>
+                {o === "All" ? `All (${orders.length})` : o}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
+      {!collapsed && (
       <div style={{
         display: 'flex',
         gap: '20px',
@@ -1031,8 +1070,9 @@ const BookOrdersPanel = ({ orders }) => {
           Shipping Charges: <strong>{formatCurrency(totalShipping)}</strong>
         </span>
       </div>
+      )}
 
-      {visible.length === 0 ? (
+      {!collapsed && (visible.length === 0 ? (
         <div style={{ padding: '24px', textAlign: 'center', color: '#6c757d' }}>
           No orders for “{view}”.
         </div>
@@ -1101,7 +1141,7 @@ const BookOrdersPanel = ({ orders }) => {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
     </div>
   );
 };

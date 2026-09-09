@@ -68,50 +68,77 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// the card wrapping a panel: <h3> -> header div -> panel card div
-const panelOf = (heading) => heading.parentElement.parentElement;
+// heading <h3> -> (header div) -> panel card div
+const panelOf = (heading) => heading.closest("h3").parentElement.parentElement;
 
-test("renders both breakdown panels and the book orders panel", async () => {
+test("renders the three panel headings", async () => {
   render(<TransactionsPage />);
-
-  expect(await screen.findByText("📁 Main Section Breakdown")).toBeInTheDocument();
-  expect(screen.getByText("📊 Category Breakdown")).toBeInTheDocument();
-  expect(screen.getByText("📚 Book / Frames Orders")).toBeInTheDocument();
+  expect(await screen.findByText(/Main Section Breakdown/)).toBeInTheDocument();
+  expect(screen.getByText(/Category Breakdown/)).toBeInTheDocument();
+  expect(screen.getByText(/Book \/ Frames Orders/)).toBeInTheDocument();
 });
 
-test("main section breakdown lists the expense sections and expands", async () => {
+test("panels are collapsed by default and open on header click", async () => {
   render(<TransactionsPage />);
-  const panel = panelOf(await screen.findByText("📁 Main Section Breakdown"));
-  const table = within(panel).getByRole("table");
+  const heading = await screen.findByText(/Main Section Breakdown/);
 
-  const row = within(table).getByRole("cell", { name: "Wardha Office" });
+  // collapsed: no table yet
+  expect(panelOf(heading).querySelector("table")).toBeNull();
+
+  fireEvent.click(heading);
+
+  const table = within(panelOf(heading)).getByRole("table");
+  expect(within(table).getByRole("cell", { name: "Wardha Office" })).toBeInTheDocument();
   expect(within(table).getByRole("cell", { name: "Hyderabad Office" })).toBeInTheDocument();
+});
 
-  // expand -> the underlying transaction note shows
-  fireEvent.click(row);
+test("expanded main-section row reveals its transactions", async () => {
+  render(<TransactionsPage />);
+  const heading = await screen.findByText(/Main Section Breakdown/);
+  fireEvent.click(heading);
+
+  const table = within(panelOf(heading)).getByRole("table");
+  fireEvent.click(within(table).getByRole("cell", { name: "Wardha Office" }));
   expect(within(table).getByText(/cab/)).toBeInTheDocument();
 });
 
-test("category breakdown groups by category", async () => {
+test("category breakdown groups by category once opened", async () => {
   render(<TransactionsPage />);
-  const panel = panelOf(await screen.findByText("📊 Category Breakdown"));
-  const table = within(panel).getByRole("table");
+  const heading = await screen.findByText(/Category Breakdown/);
+  fireEvent.click(heading);
+
+  const table = within(panelOf(heading)).getByRole("table");
   expect(within(table).getByRole("cell", { name: "Travel and Transport" })).toBeInTheDocument();
   expect(within(table).getByRole("cell", { name: "Salary" })).toBeInTheDocument();
 });
 
-test("book orders panel defaults to 'Transfer to Sanghamitra' and filters", async () => {
+test("book orders panel: opens, defaults to Transfer to Sanghamitra, filters", async () => {
   render(<TransactionsPage />);
-  const panel = panelOf(await screen.findByText("📚 Book / Frames Orders"));
+  const heading = await screen.findByText(/Book \/ Frames Orders/);
+
+  // collapsed initially
+  expect(screen.queryByText("Shivam")).not.toBeInTheDocument();
+
+  fireEvent.click(heading);
+  const panel = panelOf(heading);
 
   // default filter hides the non-Sanghamitra order
   expect(within(panel).getByText("Shivam")).toBeInTheDocument();
   expect(within(panel).queryByText("Ajeet Kumar")).not.toBeInTheDocument();
 
-  // switch to "All" -> both show
   fireEvent.change(within(panel).getByRole("combobox"), {
     target: { value: "All" },
   });
   expect(within(panel).getByText("Shivam")).toBeInTheDocument();
   expect(within(panel).getByText("Ajeet Kumar")).toBeInTheDocument();
+});
+
+test("All Transactions table is collapsed until its heading is clicked", async () => {
+  render(<TransactionsPage />);
+  const heading = await screen.findByText(/All Transactions/);
+
+  expect(screen.queryByRole("cell", { name: "Travel and Transport" })).not.toBeInTheDocument();
+
+  fireEvent.click(heading);
+  expect(screen.getByRole("cell", { name: "Travel and Transport" })).toBeInTheDocument();
 });
