@@ -68,8 +68,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// heading <h3> -> (header div) -> panel card div
-const panelOf = (heading) => heading.closest("h3").parentElement.parentElement;
+// text span -> title div -> header div -> card shell div
+const panelOf = (heading) =>
+  heading.parentElement.parentElement.parentElement;
 
 test("renders the three panel headings", async () => {
   render(<TransactionsPage />);

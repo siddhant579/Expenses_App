@@ -513,38 +513,23 @@ const TransactionsPage = () => {
       <BookOrdersPanel orders={bookOrders} />
 
       {/* Transactions Table */}
-      <div>
-        <h3
-          onClick={() => setShowTransactions((s) => !s)}
-          style={{
-            color: '#2c3e50',
-            marginBottom: '15px',
-            cursor: 'pointer',
-            userSelect: 'none',
-          }}
-        >
-          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
-            {showTransactions ? '▾' : '▸'}
-          </span>
-          📜 All Transactions ({filtered.length})
-        </h3>
-        {!showTransactions ? null : filtered.length === 0 ? (
+      <CollapsibleCard
+        title="📜 All Transactions"
+        count={filtered.length}
+        open={showTransactions}
+        onToggle={() => setShowTransactions((s) => !s)}
+      >
+        {filtered.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '40px',
             backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
             color: '#6c757d'
           }}>
             <p style={{ fontSize: '18px', margin: '0' }}>No transactions found for this filter.</p>
           </div>
         ) : (
-          <div style={{
-            overflowX: 'auto',
-            backgroundColor: '#fff',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}>
+          <div style={{ overflowX: 'auto' }}>
             <table style={{
               width: "100%",
               borderCollapse: "collapse",
@@ -731,7 +716,7 @@ const TransactionsPage = () => {
             </table>
           </div>
         )}
-      </div>
+      </CollapsibleCard>
     </div>
   );
 };
@@ -830,7 +815,16 @@ const addressCellStyle = {
   lineHeight: 1.4,
 };
 
-const collapsibleHeaderStyle = {
+const cardShellStyle = {
+  marginBottom: '20px',
+  backgroundColor: '#fff',
+  borderRadius: '10px',
+  border: '1px solid #e9ecef',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+  overflow: 'hidden',
+};
+
+const cardHeaderStyle = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -841,6 +835,41 @@ const collapsibleHeaderStyle = {
   cursor: 'pointer',
   userSelect: 'none',
 };
+
+// plain div title (avoids the global <h3> border/background/::before styling
+// so every collapsible header lines up identically)
+const cardTitleTextStyle = {
+  margin: 0,
+  fontSize: '1.15rem',
+  fontWeight: 700,
+  color: '#2c3e50',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+};
+
+// One consistent collapsible card used by every section on this page
+const CollapsibleCard = ({ title, count, open, onToggle, headerRight, children }) => (
+  <div style={cardShellStyle}>
+    <div
+      onClick={onToggle}
+      style={{
+        ...cardHeaderStyle,
+        borderBottom: open ? '1px solid #e9ecef' : 'none',
+      }}
+    >
+      <div style={cardTitleTextStyle}>
+        <span style={{ color: '#7f8c8d' }}>{open ? '▾' : '▸'}</span>
+        <span>
+          {title}
+          {count !== undefined ? ` (${count})` : ''}
+        </span>
+      </div>
+      {open && headerRight}
+    </div>
+    {open && children}
+  </div>
+);
 
 // Reusable collapsible breakdown panel (grouped by section or by category)
 const BreakdownPanel = ({ title, keyHeader, rows }) => {
@@ -853,46 +882,28 @@ const BreakdownPanel = ({ title, keyHeader, rows }) => {
   const visible = view === "All" ? rows : rows.filter((r) => r.key === view);
 
   return (
-    <div style={{
-      marginBottom: '20px',
-      backgroundColor: '#fff',
-      borderRadius: '10px',
-      border: '1px solid #e9ecef',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
-      overflow: 'hidden'
-    }}>
-      <div
-        onClick={() => setCollapsed((c) => !c)}
-        style={{
-          ...collapsibleHeaderStyle,
-          borderBottom: collapsed ? 'none' : '1px solid #e9ecef',
-        }}
-      >
-        <h3 style={{ color: '#2c3e50', margin: 0 }}>
-          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
-            {collapsed ? '▸' : '▾'}
-          </span>
-          {title} ({rows.length})
-        </h3>
-        {!collapsed && (
-          <select
-            value={view}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              setView(e.target.value);
-              setExpanded(null);
-            }}
-            style={selectStyle}
-          >
-            <option value="All">All ({rows.length})</option>
-            {rows.map((r) => (
-              <option key={r.key} value={r.key}>{r.key}</option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {!collapsed && (
+    <CollapsibleCard
+      title={title}
+      count={rows.length}
+      open={!collapsed}
+      onToggle={() => setCollapsed((c) => !c)}
+      headerRight={
+        <select
+          value={view}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            setView(e.target.value);
+            setExpanded(null);
+          }}
+          style={selectStyle}
+        >
+          <option value="All">All ({rows.length})</option>
+          {rows.map((r) => (
+            <option key={r.key} value={r.key}>{r.key}</option>
+          ))}
+        </select>
+      }
+    >
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
           <thead>
@@ -983,8 +994,7 @@ const BreakdownPanel = ({ title, keyHeader, rows }) => {
           </tfoot>
         </table>
       </div>
-      )}
-    </div>
+    </CollapsibleCard>
   );
 };
 
@@ -1014,44 +1024,26 @@ const BookOrdersPanel = ({ orders }) => {
   );
 
   return (
-    <div style={{
-      marginBottom: '20px',
-      backgroundColor: '#fff',
-      borderRadius: '10px',
-      border: '1px solid #e9ecef',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
-      overflow: 'hidden'
-    }}>
-      <div
-        onClick={() => setCollapsed((c) => !c)}
-        style={{
-          ...collapsibleHeaderStyle,
-          borderBottom: collapsed ? 'none' : '1px solid #e9ecef',
-        }}
-      >
-        <h3 style={{ color: '#2c3e50', margin: 0 }}>
-          <span style={{ color: '#7f8c8d', marginRight: 8 }}>
-            {collapsed ? '▸' : '▾'}
-          </span>
-          📚 Book / Frames Orders ({orders.length})
-        </h3>
-        {!collapsed && (
-          <select
-            value={view}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setView(e.target.value)}
-            style={selectStyle}
-          >
-            {options.map((o) => (
-              <option key={o} value={o}>
-                {o === "All" ? `All (${orders.length})` : o}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {!collapsed && (
+    <CollapsibleCard
+      title="📚 Book / Frames Orders"
+      count={orders.length}
+      open={!collapsed}
+      onToggle={() => setCollapsed((c) => !c)}
+      headerRight={
+        <select
+          value={view}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => setView(e.target.value)}
+          style={selectStyle}
+        >
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o === "All" ? `All (${orders.length})` : o}
+            </option>
+          ))}
+        </select>
+      }
+    >
       <div style={{
         display: 'flex',
         gap: '20px',
@@ -1070,9 +1062,8 @@ const BookOrdersPanel = ({ orders }) => {
           Shipping Charges: <strong>{formatCurrency(totalShipping)}</strong>
         </span>
       </div>
-      )}
 
-      {!collapsed && (visible.length === 0 ? (
+      {visible.length === 0 ? (
         <div style={{ padding: '24px', textAlign: 'center', color: '#6c757d' }}>
           No orders for “{view}”.
         </div>
@@ -1141,8 +1132,8 @@ const BookOrdersPanel = ({ orders }) => {
             </tbody>
           </table>
         </div>
-      ))}
-    </div>
+      )}
+    </CollapsibleCard>
   );
 };
 
