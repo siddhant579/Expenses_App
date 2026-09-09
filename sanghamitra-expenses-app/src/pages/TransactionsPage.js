@@ -35,16 +35,36 @@ const TransactionsPage = () => {
     "Engineering Based": ["Hyderabad", "Wardha"],
   };
 
+  const [bookOrders, setBookOrders] = useState([]);
+
   useEffect(() => {
     fetchExpenses();
+    fetchBookOrders();
   }, []);
+
+  const fetchBookOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch("http://localhost:5000/api/book-orders", {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        setBookOrders(await res.json());
+      }
+    } catch (err) {
+      console.error("Error fetching book orders:", err);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch("https://expenses-app-server-one.vercel.app/api/expenses", {
+      const res = await fetch("http://localhost:5000/api/expenses", {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -106,7 +126,7 @@ const TransactionsPage = () => {
       }
 
       // Update in backend
-      const res = await fetch(`https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
+      const res = await fetch(`http://localhost:5000/api/expenses/${expenseId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -142,7 +162,7 @@ const TransactionsPage = () => {
       }
 
       // Update in backend
-      const res = await fetch(`https://expenses-app-server-one.vercel.app/api/expenses/${expenseId}`, {
+      const res = await fetch(`http://localhost:5000/api/expenses/${expenseId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -236,19 +256,28 @@ const TransactionsPage = () => {
     carryOver = prevNet;
   }
 
-  const getTotalByCategory = () => {
-    const totals = {};
-    filtered.forEach((expense) => {
-      const key = `${expense.category}-${expense.type}`;
-      if (!totals[key]) totals[key] = 0;
-      totals[key] += expense.amount;
+  // Group filtered transactions by a key with credit/debit/net + the rows
+  const buildBreakdown = (list, keyFn) => {
+    const map = {};
+    list.forEach((expense) => {
+      const key = keyFn(expense) || "Uncategorized";
+      if (!map[key]) {
+        map[key] = { key, credit: 0, debit: 0, count: 0, items: [] };
+      }
+      if (expense.type === "Credit") map[key].credit += expense.amount;
+      else map[key].debit += expense.amount;
+      map[key].count += 1;
+      map[key].items.push(expense);
     });
-    return totals;
+
+    return Object.values(map)
+      .map((c) => ({ ...c, net: c.credit - c.debit }))
+      .sort((a, b) => b.credit + b.debit - (a.credit + a.debit));
   };
 
-  const categoryTotals = getTotalByCategory();
+  const sectionBreakdown = buildBreakdown(filtered, (e) => e.mainCategory);
+  const categoryBreakdown = buildBreakdown(filtered, (e) => e.category);
   const finalBalance = carryOver + currentNet;
-  const formatCurrency = (num) => "₹" + (num || 0).toLocaleString("en-IN");
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '20px' }}>Loading transactions...</div>;
@@ -460,39 +489,22 @@ const TransactionsPage = () => {
         </div>
       </div>
 
+      {/* Main Expense Section Breakdown */}
+      <BreakdownPanel
+        title="📁 Main Section Breakdown"
+        keyHeader="Expense Section"
+        rows={sectionBreakdown}
+      />
+
       {/* Category Breakdown */}
-      {Object.keys(categoryTotals).length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>📊 Category Breakdown</h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '10px'
-          }}>
-            {Object.entries(categoryTotals).map(([key, val]) => (
-              <div key={key} style={{
-                backgroundColor: '#f8f9fa',
-                padding: '12px',
-                borderRadius: '6px',
-                border: '1px solid #e9ecef',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontWeight: '500', color: '#495057' }}>
-                  {key.replace("-", " → ")}
-                </span>
-                <span style={{ 
-                  fontWeight: '600', 
-                  color: key.includes('Credit') ? '#27ae60' : '#e74c3c'
-                }}>
-                  {formatCurrency(val)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <BreakdownPanel
+        title="📊 Category Breakdown"
+        keyHeader="Category"
+        rows={categoryBreakdown}
+      />
+
+      {/* Book / Frames Orders (Offline) */}
+      <BookOrdersPanel orders={bookOrders} />
 
       {/* Transactions Table */}
       <div>
@@ -779,6 +791,314 @@ const tdStyle = {
   border: "1px solid #ddd",
   padding: "12px",
   fontSize: '14px'
+};
+
+const formatCurrency = (num) => "₹" + (num || 0).toLocaleString("en-IN");
+
+// Collapse a multi-line address into one clean, comma-separated line
+const formatAddress = (addr) => {
+  if (!addr) return "—";
+  return addr
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(", ");
+};
+
+const addressCellStyle = {
+  minWidth: "220px",
+  maxWidth: "280px",
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+  lineHeight: 1.4,
+};
+
+// Reusable collapsible breakdown panel (grouped by section or by category)
+const BreakdownPanel = ({ title, keyHeader, rows }) => {
+  const [view, setView] = useState("All");
+  const [expanded, setExpanded] = useState(null);
+
+  if (!rows || rows.length === 0) return null;
+
+  const visible = view === "All" ? rows : rows.filter((r) => r.key === view);
+
+  return (
+    <div style={{
+      marginBottom: '20px',
+      backgroundColor: '#fff',
+      borderRadius: '10px',
+      border: '1px solid #e9ecef',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px',
+        padding: '16px 20px',
+        borderBottom: '1px solid #e9ecef',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <h3 style={{ color: '#2c3e50', margin: 0 }}>{title}</h3>
+        <select
+          value={view}
+          onChange={(e) => {
+            setView(e.target.value);
+            setExpanded(null);
+          }}
+          style={selectStyle}
+        >
+          <option value="All">All ({rows.length})</option>
+          {rows.map((r) => (
+            <option key={r.key} value={r.key}>{r.key}</option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#34495e' }}>
+              <th style={thStyle}></th>
+              <th style={thStyle}>{keyHeader}</th>
+              <th style={{ ...thStyle, textAlign: 'center' }}>Txns</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Credit</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Debit</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((c, i) => {
+              const isOpen = expanded === c.key;
+              return (
+                <React.Fragment key={c.key}>
+                  <tr
+                    onClick={() => setExpanded(isOpen ? null : c.key)}
+                    style={{
+                      backgroundColor: isOpen ? '#eef4fb' : i % 2 === 0 ? '#fff' : '#f8f9fa',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <td style={{ ...tdStyle, width: '32px', textAlign: 'center', color: '#7f8c8d' }}>
+                      {isOpen ? '▾' : '▸'}
+                    </td>
+                    <td style={{ ...tdStyle, fontWeight: '600', color: '#2c3e50' }}>{c.key}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{c.count}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: '#27ae60', fontWeight: '600' }}>
+                      {formatCurrency(c.credit)}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'right', color: '#e74c3c', fontWeight: '600' }}>
+                      {formatCurrency(c.debit)}
+                    </td>
+                    <td style={{
+                      ...tdStyle,
+                      textAlign: 'right',
+                      fontWeight: '700',
+                      color: c.net >= 0 ? '#2980b9' : '#c0392b'
+                    }}>
+                      {formatCurrency(c.net)}
+                    </td>
+                  </tr>
+
+                  {isOpen && c.items.map((item, j) => (
+                    <tr key={`${c.key}-${j}`} style={{ backgroundColor: '#dfe7f1' }}>
+                      <td style={{ ...tdStyle, borderLeft: '3px solid #2980b9' }}></td>
+                      <td style={{ ...tdStyle, color: '#3d4a5c', fontSize: '13px', fontWeight: '500' }}>
+                        {new Date(item.date).toLocaleDateString('en-IN')}
+                        {' · '}
+                        {keyHeader === 'Category' ? (item.mainCategory || '—') : (item.category || '—')}
+                        {item.note ? ` — ${item.note}` : ''}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontSize: '13px', color: '#3d4a5c' }}>
+                        {item.location || '—'}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'right', fontSize: '13px', color: '#1e8449', fontWeight: '600' }}>
+                        {item.type === 'Credit' ? formatCurrency(item.amount) : '—'}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'right', fontSize: '13px', color: '#c0392b', fontWeight: '600' }}>
+                        {item.type === 'Debit' ? formatCurrency(item.amount) : '—'}
+                      </td>
+                      <td style={tdStyle}></td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ backgroundColor: '#ecf0f1', fontWeight: '700' }}>
+              <td style={tdStyle}></td>
+              <td style={{ ...tdStyle, color: '#2c3e50' }}>Total</td>
+              <td style={{ ...tdStyle, textAlign: 'center' }}>
+                {visible.reduce((s, c) => s + c.count, 0)}
+              </td>
+              <td style={{ ...tdStyle, textAlign: 'right', color: '#27ae60' }}>
+                {formatCurrency(visible.reduce((s, c) => s + c.credit, 0))}
+              </td>
+              <td style={{ ...tdStyle, textAlign: 'right', color: '#e74c3c' }}>
+                {formatCurrency(visible.reduce((s, c) => s + c.debit, 0))}
+              </td>
+              <td style={{ ...tdStyle, textAlign: 'right', color: '#2980b9' }}>
+                {formatCurrency(visible.reduce((s, c) => s + c.net, 0))}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// 📚 Book / Frames offline orders — focus on "Transfer to Sanghamitra"
+const BookOrdersPanel = ({ orders }) => {
+  const SANGHAMITRA = "Transfer to Sanghamitra";
+  const [view, setView] = useState(SANGHAMITRA);
+
+  if (!orders || orders.length === 0) return null;
+
+  const statuses = Array.from(
+    new Set(orders.map((o) => o.creditStatus).filter(Boolean))
+  );
+  const options = ["All", SANGHAMITRA, ...statuses.filter((s) => s !== SANGHAMITRA)];
+
+  const visible =
+    view === "All" ? orders : orders.filter((o) => o.creditStatus === view);
+
+  const totalReceived = visible.reduce(
+    (s, o) => s + (o.amountReceived || 0),
+    0
+  );
+  const totalShipping = visible.reduce(
+    (s, o) => s + (o.shippingCharges || 0),
+    0
+  );
+
+  return (
+    <div style={{
+      marginBottom: '20px',
+      backgroundColor: '#fff',
+      borderRadius: '10px',
+      border: '1px solid #e9ecef',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px',
+        padding: '16px 20px',
+        borderBottom: '1px solid #e9ecef',
+        backgroundColor: '#f8f9fa'
+      }}>
+        <h3 style={{ color: '#2c3e50', margin: 0 }}>📚 Book / Frames Orders</h3>
+        <select
+          value={view}
+          onChange={(e) => setView(e.target.value)}
+          style={selectStyle}
+        >
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o === "All" ? `All (${orders.length})` : o}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        gap: '20px',
+        flexWrap: 'wrap',
+        padding: '12px 20px',
+        borderBottom: '1px solid #e9ecef',
+        fontSize: '14px'
+      }}>
+        <span style={{ color: '#495057' }}>
+          Orders: <strong>{visible.length}</strong>
+        </span>
+        <span style={{ color: '#27ae60' }}>
+          Amount Received: <strong>{formatCurrency(totalReceived)}</strong>
+        </span>
+        <span style={{ color: '#e67e22' }}>
+          Shipping Charges: <strong>{formatCurrency(totalShipping)}</strong>
+        </span>
+      </div>
+
+      {visible.length === 0 ? (
+        <div style={{ padding: '24px', textAlign: 'center', color: '#6c757d' }}>
+          No orders for “{view}”.
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1200px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#34495e' }}>
+                <th style={thStyle}>Sr. No</th>
+                <th style={thStyle}>Item</th>
+                <th style={thStyle}>Customer</th>
+                <th style={{ ...thStyle, ...addressCellStyle }}>Address</th>
+                <th style={thStyle}>Shipping Date</th>
+                <th style={thStyle}>Name</th>
+                <th style={{ ...thStyle, textAlign: 'center' }}>Qty</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Amount Received</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Shipping</th>
+                <th style={thStyle}>Credit Status</th>
+                <th style={thStyle}>Credit / Debit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((o, i) => (
+                <tr key={o._id || i} style={{ backgroundColor: i % 2 === 0 ? '#fff' : '#f8f9fa' }}>
+                  <td style={tdStyle}>{i + 1}</td>
+                  <td style={tdStyle}>{o.itemType || 'Book'}</td>
+                  <td style={tdStyle}>{o.customerName}</td>
+                  <td style={{ ...tdStyle, ...addressCellStyle }} title={o.address || ""}>
+                    {formatAddress(o.address)}
+                  </td>
+                  <td style={tdStyle}>
+                    {o.shippingDate
+                      ? new Date(o.shippingDate).toLocaleDateString('en-IN')
+                      : '—'}
+                  </td>
+                  <td style={tdStyle}>{o.bookName || '—'}</td>
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>{o.noOfBooks || 0}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', color: '#27ae60', fontWeight: '600' }}>
+                    {formatCurrency(o.amountReceived)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    {formatCurrency(o.shippingCharges)}
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      background: o.creditStatus === SANGHAMITRA ? '#1e7e34' : '#8b1a1a',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontWeight: 600
+                    }}>
+                      {o.creditStatus || '—'}
+                    </span>
+                  </td>
+                  <td style={{
+                    ...tdStyle,
+                    fontWeight: '600',
+                    color: o.type === 'Credit' ? '#27ae60' : '#e74c3c'
+                  }}>
+                    {o.type || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default TransactionsPage;

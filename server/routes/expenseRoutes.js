@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const Expense = require("../models/Expense");
+const BookOrder = require("../models/BookOrder");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Organization = require("../models/organization");
@@ -229,6 +230,110 @@ router.put("/expenses/:id", verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Error updating expense:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// ============================================================
+// 📚 BOOK ORDERS (Offline) - "Books Publication" expense category
+// ============================================================
+
+// 🔐 POST - Add a book order (Protected)
+router.post("/book-orders", verifyToken, async (req, res) => {
+  try {
+    const bookOrder = new BookOrder({
+      ...req.body,
+      organizationId: req.user.organizationId,
+      userId: req.user._id,
+    });
+
+    await bookOrder.save();
+    await bookOrder.populate("userId", "name email role");
+
+    res.status(201).json(bookOrder);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 🔐 GET - Book orders (Protected)
+// Admin sees all orders in the organization, employee sees only their own
+router.get("/book-orders", verifyToken, async (req, res) => {
+  try {
+    const filter = { organizationId: req.user.organizationId };
+
+    if (req.user.role === "employee") {
+      filter.userId = req.user._id;
+    }
+
+    const bookOrders = await BookOrder.find(filter)
+      .populate("userId", "name email role")
+      .sort({ createdAt: -1 });
+
+    res.json(bookOrders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔐 PUT - Update a book order (Protected)
+router.put("/book-orders/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const bookOrder = await BookOrder.findById(id);
+    if (!bookOrder) {
+      return res.status(404).json({ message: "Book order not found" });
+    }
+
+    if (
+      bookOrder.organizationId.toString() !== req.user.organizationId.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this book order" });
+    }
+
+    if (
+      req.user.role === "employee" &&
+      bookOrder.userId.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this book order" });
+    }
+
+    // Only allow known fields to be updated
+    const allowedFields = [
+      "itemType",
+      "customerName",
+      "shippingDate",
+      "address",
+      "amountReceived",
+      "shippingCharges",
+      "bookName",
+      "noOfBooks",
+      "contactNumber",
+      "creditStatus",
+      "type",
+      "note",
+    ];
+
+    const updateData = {};
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+
+    const updatedBookOrder = await BookOrder.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).populate("userId", "name email role");
+
+    res.json(updatedBookOrder);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
