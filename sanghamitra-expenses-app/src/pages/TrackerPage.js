@@ -7,7 +7,9 @@ import {
   namesFor,
 } from "../constants/catalog";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://expenses-app-server-one.vercel.app/api";
 
 const emptyForm = () => ({
   mainCategory: "",

@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from "react";
+
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://expenses-app-server-one.vercel.app/api";
+
 const TransactionsPage = () => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +52,7 @@ const TransactionsPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch("http://localhost:5000/api/book-orders", {
+      const res = await fetch(`${API_URL}/book-orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -64,7 +69,7 @@ const TransactionsPage = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch("http://localhost:5000/api/expenses", {
+      const res = await fetch(`${API_URL}/expenses`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -126,7 +131,7 @@ const TransactionsPage = () => {
       }
 
       // Update in backend
-      const res = await fetch(`http://localhost:5000/api/expenses/${expenseId}`, {
+      const res = await fetch(`${API_URL}/expenses/${expenseId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +167,7 @@ const TransactionsPage = () => {
       }
 
       // Update in backend
-      const res = await fetch(`http://localhost:5000/api/expenses/${expenseId}`, {
+      const res = await fetch(`${API_URL}/expenses/${expenseId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
