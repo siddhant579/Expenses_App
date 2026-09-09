@@ -36,6 +36,10 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       required: true, // October / November etc.
     },
+    note: {
+      type: String,
+      default: "",
+    },
     receiptURL: {
       type: String,
       default: "",
